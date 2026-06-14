@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // FILE 2: src/components/common/Skeleton.tsx
 // =============================================================================
 //
@@ -10,29 +10,33 @@
 //   We use Animated.Value to animate opacity between 0.4 and 1.0.
 //   This creates the "shimmer" effect. The animation loops forever
 //   until the real content replaces the skeleton.
- 
+
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
-import { COLORS } from '../../constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '../../constants/spacing';
- 
+
 interface SkeletonProps {
   width?: number | `${number}%` | 'auto';
   height?: number;
   borderRadius?: number;
   style?: ViewStyle;
 }
- 
+
 export const Skeleton: React.FC<SkeletonProps> = ({
   width = '100%',
   height = 16,
   borderRadius = SPACING.borderRadius.sm,
   style,
 }) => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const skeletonStyles = makeStyles(COLORS, isDark);
+
   // Animated.Value is like useState but for animations.
   // It can be interpolated to drive CSS-like properties.
   const opacity = useRef(new Animated.Value(0.4)).current;
- 
+
   useEffect(() => {
     // Animated.loop() repeats the animation sequence forever
     const animation = Animated.loop(
@@ -53,11 +57,11 @@ export const Skeleton: React.FC<SkeletonProps> = ({
       ])
     );
     animation.start();
- 
+
     // Stop animation when component unmounts — prevents memory leaks
     return () => animation.stop();
   }, [opacity]);
- 
+
   return (
     <Animated.View
       style={[
@@ -68,27 +72,32 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     />
   );
 };
- 
+
 // A pre-composed ServiceCard skeleton — shows the exact card shape while loading
-export const ServiceCardSkeleton: React.FC = () => (
-  <View style={skeletonStyles.card}>
-    <Skeleton height={160} borderRadius={SPACING.borderRadius.md} />
-    <View style={skeletonStyles.cardBody}>
-      <View style={skeletonStyles.row}>
-        <Skeleton width={32} height={32} borderRadius={16} />
-        <Skeleton width="60%" height={14} />
-      </View>
-      <Skeleton width="90%" height={16} />
-      <Skeleton width="70%" height={14} />
-      <View style={skeletonStyles.row}>
-        <Skeleton width="30%" height={14} />
-        <Skeleton width="25%" height={14} />
+export const ServiceCardSkeleton: React.FC = () => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const skeletonStyles = makeStyles(COLORS, isDark);
+
+  return (
+    <View style={skeletonStyles.card}>
+      <Skeleton height={160} borderRadius={SPACING.borderRadius.md} />
+      <View style={skeletonStyles.cardBody}>
+        <View style={skeletonStyles.row}>
+          <Skeleton width={32} height={32} borderRadius={16} />
+          <Skeleton width="60%" height={14} />
+        </View>
+        <Skeleton width="90%" height={16} />
+        <Skeleton width="70%" height={14} />
+        <View style={skeletonStyles.row}>
+          <Skeleton width="30%" height={14} />
+          <Skeleton width="25%" height={14} />
+        </View>
       </View>
     </View>
-  </View>
-);
- 
-const skeletonStyles = StyleSheet.create({
+  );
+};
+
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   base: {
     backgroundColor: COLORS.border,
   },

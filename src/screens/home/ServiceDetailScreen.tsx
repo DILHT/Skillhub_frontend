@@ -1,9 +1,10 @@
-// src/screens/home/ServiceDetailScreen.tsx
+﻿// src/screens/home/ServiceDetailScreen.tsx
 
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, Image, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions, StatusBar,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -16,7 +17,9 @@ import { Button } from '@/components/common';
 import { RatingStars } from '@/components/service/RatingStars';
 import { ServiceCardSkeleton } from '@/components/common/Skeleton';
 import { HomeStackParamList } from '@/navigation/AppNavigator';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
+import { SmartImage } from '@/components/common/SmartImage';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
 
@@ -32,6 +35,8 @@ function formatPrice(price: number, currency: string, unit: string): string {
 }
 
 export default function ServiceDetailScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProps>();
   const { serviceId } = route.params;
@@ -44,8 +49,8 @@ export default function ServiceDetailScreen() {
 
   const handleBookNow = () => {
     if (!service) return;
-    startBooking(service);                          // Initialise the booking draft
-    navigation.navigate('BookingFlow', { serviceId: service.id }); // Go to booking form
+    startBooking(service);
+    navigation.navigate('BookingFlow', { serviceId: service.id });
   };
 
   // ── LOADING ─────────────────────────────────────────────────────────────────
@@ -74,7 +79,7 @@ export default function ServiceDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" />
 
       <ScrollView
@@ -94,9 +99,9 @@ export default function ServiceDetailScreen() {
             }}
             scrollEventThrottle={16}
           >
-            {(service.images.length > 0 ? service.images : ['https://via.placeholder.com/400x300']).map(
+            {(service.images.length > 0 ? service.images : [undefined]).map(
               (uri, i) => (
-                <Image key={i} source={{ uri }} style={styles.image} resizeMode="cover" />
+                <SmartImage key={i} uri={uri} style={styles.image} fallbackIcon="image-outline" />
               )
             )}
           </ScrollView>
@@ -104,6 +109,7 @@ export default function ServiceDetailScreen() {
           {/* Back button — floating over the image */}
           <TouchableOpacity
             style={styles.backButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={20} color={COLORS.white} />
@@ -170,7 +176,11 @@ export default function ServiceDetailScreen() {
           {/* ── PROVIDER SECTION ─────────────────────────────────────────────── */}
           <Text style={styles.sectionLabel}>About the provider</Text>
 
-          <View style={styles.providerCard}>
+          <TouchableOpacity
+            style={styles.providerCard}
+            onPress={() => navigation.navigate('ProviderProfile', { providerId: service.provider.id })}
+            activeOpacity={0.7}
+          >
             <Avatar
               uri={service.provider.avatar}
               name={`${service.provider.firstName} ${service.provider.lastName}`}
@@ -194,7 +204,8 @@ export default function ServiceDetailScreen() {
               />
               <Text style={styles.responseTime}>{service.provider.responseTime}</Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
+          </TouchableOpacity>
 
           <View style={styles.divider} />
 
@@ -243,7 +254,13 @@ export default function ServiceDetailScreen() {
         ) : (
           <Button
             label="Edit Service"
-            onPress={() => {}} // Lesson 07: provider flow
+            onPress={() =>
+                  Alert.alert(
+                    'Edit Service',
+                    'Service management for providers is coming soon.',
+                    [{ text: 'OK' }]
+                  )
+                }
             variant="outline"
             style={styles.bookButton}
             size="lg"
@@ -254,7 +271,7 @@ export default function ServiceDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: SPACING.xl },

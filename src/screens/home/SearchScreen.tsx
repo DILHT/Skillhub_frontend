@@ -1,4 +1,4 @@
-// src/screens/home/SearchScreen.tsx
+﻿// src/screens/home/SearchScreen.tsx
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
@@ -18,11 +18,14 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { ServiceCard } from '@/components/service/ServiceCard';
 import { ServiceCardSkeleton } from '@/components/common/Skeleton';
 import { Service } from '@/types/service.types';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
 
 export default function SearchScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const inputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
@@ -33,6 +36,8 @@ export default function SearchScreen() {
   const {
     data,
     isLoading,
+    isError,
+    refetch,
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
@@ -46,6 +51,23 @@ export default function SearchScreen() {
 
   // Flatten all pages into one array for FlatList
   const results: Service[] = data?.pages.flatMap((page) => page.data) ?? [];
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerState}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textSecondary} />
+          <Text style={styles.errorStateTitle}>Couldn't load</Text>
+          <Text style={styles.errorStateText}>
+            Something went wrong. Please check your connection and try again.
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -61,6 +83,7 @@ export default function SearchScreen() {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
@@ -142,7 +165,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -211,5 +234,35 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.fontSize.sm,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  errorStateTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  errorStateText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  retryButton: {
+    marginTop: 8,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  retryButtonText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

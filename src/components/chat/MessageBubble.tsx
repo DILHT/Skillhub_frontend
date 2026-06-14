@@ -1,10 +1,11 @@
-// src/components/chat/MessageBubble.tsx
+﻿// src/components/chat/MessageBubble.tsx
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Message } from '../../types/chat.types';
-import { COLORS } from '../../constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { format, parseISO } from 'date-fns';
@@ -16,14 +17,18 @@ interface MessageBubbleProps {
 
 // Shows the correct read receipt icon based on message status
 function StatusIcon({ status }: { status: Message['status'] }) {
+  const { colors: COLORS } = useAppTheme();
   if (status === 'sending') return <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.6)" />;
   if (status === 'sent') return <Ionicons name="checkmark-outline" size={12} color="rgba(255,255,255,0.7)" />;
   if (status === 'delivered') return <Ionicons name="checkmark-done-outline" size={12} color="rgba(255,255,255,0.7)" />;
-  if (status === 'read') return <Ionicons name="checkmark-done-outline" size={12} color="#86EFAC" />;
+  if (status === 'read') return <Ionicons name="checkmark-done-outline" size={12} color={COLORS.successBorder} />;
   return null;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine }) => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
+
   const timeString = format(parseISO(message.createdAt), 'HH:mm');
 
   return (
@@ -43,7 +48,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine })
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, isDark: boolean) => StyleSheet.create({
   row: {
     marginVertical: 2,
     paddingHorizontal: SPACING.screenPadding,
@@ -58,15 +63,17 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     gap: 4,
   },
+  // My messages: always blue in both modes
   bubbleMine: {
     backgroundColor: COLORS.primary,
     borderBottomRightRadius: 4,
   },
+  // Their messages: surface in light, surfaceSecondary in dark
   bubbleTheirs: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: isDark ? COLORS.surfaceSecondary : COLORS.surface,
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderWidth: isDark ? 0 : 1,
+    borderColor: isDark ? 'transparent' : COLORS.border,
   },
 
   content: {

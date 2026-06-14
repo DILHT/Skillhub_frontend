@@ -1,39 +1,32 @@
-import React, { useState, forwardRef } from 'react';
+﻿import React, { useState, forwardRef } from 'react';
 import {
   View,
   TextInput,
-  TextInputProps,  // All native TextInput props
+  TextInputProps,
   Text,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TYPOGRAPHY } from '@/constants/typography';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
- 
+
 // ─── TYPES ───────────────────────────────────────────────────────────────────
- 
+
 interface InputProps extends TextInputProps {
-  label?: string;          // The floating label above the field
-  error?: string;          // Error message from react-hook-form
-  hint?: string;           // Helper text below the field
-  leftIcon?: keyof typeof Ionicons.glyphMap;   // Ionicon name
+  label?: string;
+  error?: string;
+  hint?: string;
+  leftIcon?: keyof typeof Ionicons.glyphMap;
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightIconPress?: () => void;
-  isRequired?: boolean;    // Shows a red asterisk on the label
+  isRequired?: boolean;
 }
- 
+
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
-//
-// forwardRef is REQUIRED for react-hook-form to control this input.
-// Without it, the form cannot focus the field or read its value.
-//
-// How forwardRef works:
-//   <Input ref={someRef} />
-//   The ref is "forwarded" into the native <TextInput>, so react-hook-form
-//   can call someRef.current.focus() on it directly.
- 
+
 export const Input = forwardRef<any, InputProps>(({
   label,
   error,
@@ -46,38 +39,24 @@ export const Input = forwardRef<any, InputProps>(({
   style,
   ...rest
 }, ref) => {
- 
-  // ── LOCAL STATE ────────────────────────────────────────────────────────────
-  //
-  // These states only affect THIS component's appearance.
-  // They are NOT in Zustand because nothing outside this component cares.
-  // Rule: local UI state stays in useState. Shared app state goes to Zustand.
- 
+  const { colors: COLORS, isDark } = useAppTheme();
+  const inputStyles = makeStyles(COLORS, isDark);
+
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
- 
-  // If this is a password field, we manage visibility internally
+
   const isPasswordField = secureTextEntry;
   const shouldHideText = isPasswordField && !isPasswordVisible;
- 
-  // ── DERIVED STYLES ─────────────────────────────────────────────────────────
-  //
-  // The border changes color based on state:
-  //   error → red border (highest priority)
-  //   focused → primary color border
-  //   default → gray border
- 
+
   const containerBorderColor = error
     ? COLORS.danger
     : isFocused
     ? COLORS.primary
     : COLORS.border;
- 
-  // ── RENDER ─────────────────────────────────────────────────────────────────
- 
+
   return (
     <View style={inputStyles.wrapper}>
- 
+
       {/* LABEL */}
       {label && (
         <View style={inputStyles.labelRow}>
@@ -87,14 +66,14 @@ export const Input = forwardRef<any, InputProps>(({
           )}
         </View>
       )}
- 
-      {/* INPUT CONTAINER — the visible box */}
+
+      {/* INPUT CONTAINER */}
       <View style={[
         inputStyles.container,
         { borderColor: containerBorderColor },
         isFocused && inputStyles.focused,
       ]}>
- 
+
         {/* LEFT ICON */}
         {leftIcon && (
           <Ionicons
@@ -104,28 +83,25 @@ export const Input = forwardRef<any, InputProps>(({
             style={inputStyles.leftIcon}
           />
         )}
- 
+
         {/* THE ACTUAL TEXT INPUT */}
         <TextInput
-          ref={ref}           // Forward the ref here — this is the key line
+          ref={ref}
           style={[inputStyles.input, style]}
           secureTextEntry={shouldHideText}
           placeholderTextColor={COLORS.textTertiary}
- 
-          // Track focus state to change border color
           onFocus={(e) => {
             setIsFocused(true);
-            rest.onFocus?.(e); // Call consumer's onFocus too (if provided)
+            rest.onFocus?.(e);
           }}
           onBlur={(e) => {
             setIsFocused(false);
-            rest.onBlur?.(e);  // Call consumer's onBlur too (if provided)
+            rest.onBlur?.(e);
           }}
- 
-          {...rest} // Spread all other props: value, onChangeText, placeholder, etc.
+          {...rest}
         />
- 
-        {/* RIGHT ICON — either a custom icon or password toggle */}
+
+        {/* RIGHT ICON */}
         {isPasswordField ? (
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
@@ -143,29 +119,28 @@ export const Input = forwardRef<any, InputProps>(({
           </TouchableOpacity>
         ) : null}
       </View>
- 
-      {/* ERROR MESSAGE — shown when error prop is provided */}
+
+      {/* ERROR MESSAGE */}
       {error && (
         <View style={inputStyles.errorRow}>
           <Ionicons name="alert-circle-outline" size={14} color={COLORS.danger} />
           <Text style={inputStyles.errorText}>{error}</Text>
         </View>
       )}
- 
-      {/* HINT TEXT — shown when no error */}
+
+      {/* HINT TEXT */}
       {hint && !error && (
         <Text style={inputStyles.hintText}>{hint}</Text>
       )}
     </View>
   );
 });
- 
-// Required when using forwardRef — gives the component a name in React DevTools
+
 Input.displayName = 'Input';
- 
-const inputStyles = StyleSheet.create({
+
+const makeStyles = (COLORS: AppColors, isDark: boolean) => StyleSheet.create({
   wrapper: {
-    gap: SPACING.xs,       // Space between label, input, and error
+    gap: SPACING.xs,
   },
   labelRow: {
     flexDirection: 'row',
@@ -191,10 +166,10 @@ const inputStyles = StyleSheet.create({
     gap: SPACING.sm,
   },
   focused: {
-    backgroundColor: COLORS.white,
+    backgroundColor: isDark ? COLORS.surface : COLORS.white,
   },
   input: {
-    flex: 1,               // Takes all remaining space inside the container
+    flex: 1,
     fontSize: TYPOGRAPHY.fontSize.md,
     fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: COLORS.textPrimary,

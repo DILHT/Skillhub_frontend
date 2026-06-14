@@ -1,4 +1,4 @@
-// src/screens/home/HomeScreen.tsx
+﻿// src/screens/home/HomeScreen.tsx
 
 import React, { useState, useCallback } from 'react';
 import {
@@ -21,13 +21,19 @@ import { CategoryChip } from '@/components/service/CategoryChip';
 import { ServiceCardSkeleton, Skeleton } from '@/components/common/Skeleton';
 import { Button } from '@/components/common';
 import { Category, Service } from '@/types/service.types';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function HomeScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const user = useAuthStore((state) => state.user);
+  const { unreadCount } = useNotifications();
+
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -84,19 +90,24 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>
-              Good morning, {user?.firstName} 👋
+              Good morning, {user?.firstName ?? 'there'} 👋
             </Text>
             <Text style={styles.subGreeting}>
               What service do you need today?
             </Text>
           </View>
-          <TouchableOpacity style={styles.notifButton}>
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color={COLORS.textPrimary}
-            />
-            <View style={styles.notifDot} />
+          <TouchableOpacity
+            style={styles.notifButton}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <Ionicons name="notifications-outline" size={24} color={COLORS.textPrimary} />
+            {unreadCount > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -160,9 +171,7 @@ export default function HomeScreen() {
                   category={cat}
                   isSelected={selectedCategoryId === cat.id}
                   onPress={() =>
-                    setSelectedCategoryId(
-                      selectedCategoryId === cat.id ? null : cat.id
-                    )
+                    setSelectedCategoryId(selectedCategoryId === cat.id ? null : cat.id)
                   }
                 />
               ))}
@@ -173,7 +182,7 @@ export default function HomeScreen() {
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Featured</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Search')}>
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             </View>
@@ -229,6 +238,8 @@ export default function HomeScreen() {
       selectedCategoryId,
       filteredData,
       navigation,
+      styles,
+      COLORS,
     ]
   );
 
@@ -279,7 +290,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -437,4 +448,22 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
   },
+
+  notifBadge: {
+  position: 'absolute',
+  top: 2,
+  right: 2,
+  minWidth: 16,
+  height: 16,
+  borderRadius: 8,
+  backgroundColor: COLORS.danger,
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingHorizontal: 4,
+},
+notifBadgeText: {
+  color: COLORS.white,
+  fontSize: 10,
+  fontWeight: '600',
+},
 });

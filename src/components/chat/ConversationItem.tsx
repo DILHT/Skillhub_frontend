@@ -1,10 +1,11 @@
-// src/components/chat/ConversationItem.tsx
+﻿// src/components/chat/ConversationItem.tsx
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Conversation } from '../../types/chat.types';
 import { Avatar } from '../common/Avatar';
-import { COLORS } from '../../constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { formatDistanceToNow, parseISO } from 'date-fns';
@@ -18,6 +19,9 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   conversation,
   onPress,
 }) => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
+
   const timeAgo = formatDistanceToNow(parseISO(conversation.lastMessageAt), {
     addSuffix: false,
   });
@@ -60,7 +64,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -79,7 +83,7 @@ const styles = StyleSheet.create({
     width: 11,
     height: 11,
     borderRadius: 6,
-    backgroundColor: '#22C55E',
+    backgroundColor: COLORS.success,
     borderWidth: 2,
     borderColor: COLORS.surface,
   },

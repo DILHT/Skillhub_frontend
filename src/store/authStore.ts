@@ -1,81 +1,79 @@
 // src/store/authStore.ts
-// PURPOSE: The single source of truth for authentication state.
-// Every component in the app that needs to know "is the user logged in?"
-// or "what is the user's role?" reads from HERE.
-//
-// Zustand is our state manager. Think of it as a "global useState" that
-// any component can subscribe to — no prop drilling, no Context boilerplate.
+// Added: updateToken() action for token refresh without full re-login
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User } from '../types/user.types';
+import { User, UserRole } from '../types/user.types';
 
-// TypeScript interface: defines the exact shape of our auth state.
-// Having this means TypeScript will tell you if you try to access
-// a property that doesn't exist.
 interface AuthState {
-  // STATE (data)
-  user: User | null;          // null = not logged in
-  token: string | null;       // JWT token from backend
-  isAuthenticated: boolean;   // convenience boolean
-  role: 'client' | 'provider' | null; // controls which features are visible
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isHydrated: boolean;
+  role: UserRole | null;
+  logoutReason: string | null;
 
-  // ACTIONS (functions that change the state)
-  setUser: (user: User, token: string) => void;   // called after successful login
-  logout: () => void;                              // clears everything
-  updateUser: (partial: Partial<User>) => void;   // update profile info
+  setUser: (user: User, accessToken: string) => void;
+  updateToken: (accessToken: string) => void;  // ← new: used by token refresh
+  updateUser: (partial: Partial<User>) => void;
+  logout: (reason?: string) => void;
+  clearLogoutReason: () => void;
+  setHydrated: () => void;
 }
 
-// create() makes the Zustand store.
-// persist() wraps it so state survives app restarts (stored in AsyncStorage).
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      // Initial state (app just opened, no one is logged in)
       user: null,
       token: null,
       isAuthenticated: false,
+      isHydrated: false,
       role: null,
+      logoutReason: null,
 
-      // Called when login API succeeds.
-      // We update all auth-related state in one operation (atomic update).
-      setUser: (user, token) =>
+      setUser: (user, accessToken) =>
         set({
           user,
-          token,
+          token: accessToken,
           isAuthenticated: true,
-          role: user.role, // comes from backend: 'client' or 'provider'
+          role: user.role,
         }),
 
-      // Called on logout button press or when token expires.
-      // Reset everything to initial state.
-      logout: () =>
+      // Called by token refresh — updates token without touching user data
+      updateToken: (accessToken) =>
+        set({ token: accessToken }),
+
+      updateUser: (partial) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...partial } : null,
+        })),
+
+      logout: (reason) =>
         set({
           user: null,
           token: null,
           isAuthenticated: false,
           role: null,
+          logoutReason: reason ?? null,
         }),
 
-      // Called when user edits their profile.
-      // Partial<User> means "any subset of User fields" — very flexible.
-      updateUser: (partial) =>
-        set((state) => ({
-          user: state.user ? { ...state.user, ...partial } : null,
-        })),
+      clearLogoutReason: () => set({ logoutReason: null }),
+
+      setHydrated: () => set({ isHydrated: true }),
     }),
     {
-      name: 'skillhub-auth',           // key used in AsyncStorage
-      storage: createJSONStorage(() => AsyncStorage), // use mobile storage
-      // Only persist these fields. Don't persist sensitive session data
-      // you don't need across restarts.
+      name: 'skillhub-auth',
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
         role: state.role,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated();
+      },
     }
   )
 );

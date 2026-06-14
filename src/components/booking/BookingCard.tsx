@@ -1,11 +1,13 @@
-// src/components/booking/BookingCard.tsx
+﻿// src/components/booking/BookingCard.tsx
 
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Booking } from '../../types/booking.types';
 import { StatusBadge } from './StatusBadge';
-import { COLORS } from '../../constants/colors';
+import { SmartImage } from '@/components/common/SmartImage';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { format, parseISO } from 'date-fns';
@@ -20,16 +22,19 @@ function formatCurrency(amount: number, currency: string): string {
 }
 
 export const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
+
   const formattedDate = format(parseISO(booking.scheduledDate), 'EEE, d MMM yyyy');
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       {/* Service image + title row */}
       <View style={styles.topRow}>
-        <Image
-          source={{ uri: booking.service.images[0] ?? 'https://via.placeholder.com/80' }}
+        <SmartImage
+          uri={booking.service.images?.[0]}
           style={styles.image}
-          resizeMode="cover"
+          fallbackIcon="briefcase-outline"
         />
         <View style={styles.info}>
           <Text style={styles.title} numberOfLines={2}>{booking.service.title}</Text>
@@ -58,7 +63,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) =>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: SPACING.borderRadius.lg,

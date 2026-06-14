@@ -1,29 +1,33 @@
-// =============================================================================
+﻿// =============================================================================
 // FILE 4: src/components/service/CategoryChip.tsx
 // =============================================================================
 //
 // A tappable pill for filtering by category.
 // Shown in a horizontal ScrollView above the service list.
- 
+
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Category } from '../../types/service.types';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
-import { COLORS } from '../../constants/colors';
- 
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
+
 interface CategoryChipProps {
   category: Category;
   isSelected: boolean;
   onPress: () => void;
 }
- 
+
 export const CategoryChip: React.FC<CategoryChipProps> = ({
   category,
   isSelected,
   onPress,
 }) => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const chipStyles = makeStyles(COLORS, isDark);
+
   return (
     <TouchableOpacity
       style={[
@@ -51,8 +55,8 @@ export const CategoryChip: React.FC<CategoryChipProps> = ({
     </TouchableOpacity>
   );
 };
- 
-const chipStyles = StyleSheet.create({
+
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

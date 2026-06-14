@@ -1,4 +1,4 @@
-// src/screens/booking/BookingListScreen.tsx
+﻿// src/screens/booking/BookingListScreen.tsx
 
 import React, { useState } from 'react';
 import {
@@ -12,7 +12,8 @@ import { BookingCard } from '@/components/booking/BookingCard';
 import { Skeleton } from '@/components/common/Skeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { Booking, BookingStatus } from '@/types/booking.types';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
 
@@ -25,11 +26,13 @@ const FILTER_TABS: { label: string; statuses: BookingStatus[] | null }[] = [
 ];
 
 export default function BookingListScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const [activeFilter, setActiveFilter] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data: bookings = [], isLoading, refetch } = useMyBookings();
+  const { data: bookings = [], isLoading, isError, refetch } = useMyBookings();
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -41,6 +44,23 @@ export default function BookingListScreen() {
   const filtered: Booking[] = FILTER_TABS[activeFilter].statuses
     ? bookings.filter((b) => FILTER_TABS[activeFilter].statuses!.includes(b.status))
     : bookings;
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.centerState}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textSecondary} />
+          <Text style={styles.errorStateTitle}>Couldn't load</Text>
+          <Text style={styles.errorStateText}>
+            Something went wrong. Please check your connection and try again.
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -71,7 +91,6 @@ export default function BookingListScreen() {
         keyExtractor={(item) => isLoading ? String(item) : (item as Booking).id}
         renderItem={({ item }) =>
           isLoading ? (
-            // Skeleton placeholder
             <View style={styles.skeletonCard}>
               <Skeleton height={80} borderRadius={SPACING.borderRadius.lg} />
             </View>
@@ -116,7 +135,7 @@ export default function BookingListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   header: {
     padding: SPACING.screenPadding, paddingBottom: SPACING.md,
@@ -146,4 +165,34 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   browseButtonText: { color: COLORS.white, fontFamily: TYPOGRAPHY.fontFamily.medium },
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  errorStateTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  errorStateText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  retryButton: {
+    marginTop: 8,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  retryButtonText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });

@@ -1,6 +1,6 @@
 // src/screens/booking/BookingScreen.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,42 +15,18 @@ import { useNavigation } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useBookingStore } from '@/store/bookingStore';
 import { useCreateBooking } from '@/hooks/useBooking';
 import { Button, Input } from '@/components/common';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// WHY THE ORIGINAL CRASHED
-// ─────────────────────────────────────────────────────────────────────────────
-// z.string().transform(Number) makes zod produce TWO different types:
-//   Input type  = { durationHours: string }   ← what the form field sends
-//   Output type = { durationHours: number }   ← what zod returns after transform
-//
-// react-hook-form registers the OUTPUT type as the form's type, so it expects
-// durationHours to be a number internally. But <Input value={value} /> only
-// accepts a string. TypeScript catches this mismatch and throws all three errors.
-//
-// FIX: Remove .transform() from the schema entirely.
-//   durationHours stays a string from field → schema → onSubmit.
-//   Convert to number with Number() only inside onSubmit, before the API call.
-// ─────────────────────────────────────────────────────────────────────────────
+import { isValidFutureDate } from '@/utils/dateHelpers';
 
 const bookingSchema = z.object({
-  scheduledDate: z
-    .string()
-    .min(1, 'Date is required')
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use format YYYY-MM-DD'),
-
-  scheduledTime: z
-    .string()
-    .min(1, 'Time is required')
-    .regex(/^\d{2}:\d{2}$/, 'Use format HH:MM e.g. 09:00'),
-
-  // string all the way through — no .transform()
   durationHours: z
     .string()
     .min(1, 'Duration is required')
@@ -58,58 +34,103 @@ const bookingSchema = z.object({
       (v) => !isNaN(Number(v)) && Number(v) >= 1 && Number(v) <= 12,
       'Duration must be between 1 and 12 hours'
     ),
-
   address: z.string().min(5, 'Please enter the full service address'),
   notes: z.string().max(300, 'Keep notes under 300 characters').optional(),
 });
 
-// All fields are strings — consistent with what Input components accept
 type BookingFormData = z.infer<typeof bookingSchema>;
 
-const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00'];
+function formatDisplayDate(d: Date): string {
+  return d.toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+  });
+}
+
+function formatHHMM(d: Date): string {
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
 
 export default function BookingScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const draft = useBookingStore((s) => s.draft);
   const updateDraft = useBookingStore((s) => s.updateDraft);
-  const { mutate: createBooking, isPending, error } = useCreateBooking();
+  const { mutate: createBooking, isPending, error: apiError } = useCreateBooking();
+  const [error, setError] = useState('');
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<BookingFormData>({
+  const [dateValue, setDateValue] = useState<Date | null>(() => {
+    if (draft.scheduledDate) {
+      const d = new Date(draft.scheduledDate);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
+
+  const [timeValue, setTimeValue] = useState<Date | null>(() => {
+    if (draft.scheduledTime) {
+      const [h, m] = draft.scheduledTime.split(':').map(Number);
+      if (!isNaN(h) && !isNaN(m)) {
+        const d = new Date();
+        d.setHours(h, m, 0, 0);
+        return d;
+      }
+    }
+    return null;
+  });
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const { control, handleSubmit, formState: { errors } } = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
-      scheduledDate: draft.scheduledDate,
-      scheduledTime: draft.scheduledTime,
-      durationHours: String(draft.durationHours || 1), // string default ✓
+      durationHours: String(draft.durationHours || 1),
       address: draft.address,
       notes: draft.notes,
     },
   });
 
-  const watchedTime = watch('scheduledTime');
-
   const onSubmit = (data: BookingFormData) => {
-    if (!draft.serviceId) return;
+    setError('');
 
-    // Convert string → number HERE, not in the schema
+    if (!dateValue) {
+      setError('Please select a date.');
+      return;
+    }
+    if (!timeValue) {
+      setError('Please select a time.');
+      return;
+    }
+
+    const scheduledDate = dateValue.toISOString().split('T')[0];
+    const scheduledTime = formatHHMM(timeValue);
+
+    if (!isValidFutureDate(scheduledDate)) {
+      setError('Please select a future date.');
+      return;
+    }
+
+    const serviceId = draft.serviceId || draft.service?.id;
+    if (!serviceId) {
+      setError('No service selected. Please go back and choose a service.');
+      return;
+    }
+
     const duration = Number(data.durationHours);
 
     updateDraft({
-      scheduledDate: data.scheduledDate,
-      scheduledTime: data.scheduledTime,
+      scheduledDate,
+      scheduledTime,
       durationHours: duration,
       address: data.address,
       notes: data.notes ?? '',
     });
 
     createBooking({
-      serviceId: draft.serviceId,
-      scheduledDate: data.scheduledDate,
-      scheduledTime: data.scheduledTime,
+      serviceId,
+      scheduledDate,
+      scheduledTime,
       durationHours: duration,
       address: data.address,
       notes: data.notes ?? '',
@@ -135,7 +156,10 @@ export default function BookingScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
             <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Book Service</Text>
@@ -157,65 +181,42 @@ export default function BookingScreen() {
           </View>
 
           <View style={styles.form}>
-            {/* DATE */}
-            <Controller
-              control={control}
-              name="scheduledDate"
-              render={({ field: { onChange, onBlur, value, ref } }) => (
-                <Input
-                  ref={ref}
-                  label="Date"
-                  placeholder="YYYY-MM-DD e.g. 2024-08-15"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.scheduledDate?.message}
-                  leftIcon="calendar-outline"
-                  isRequired
-                  hint="Enter the date you want the service"
-                />
-              )}
-            />
 
-            {/* TIME + QUICK-SELECT */}
-            <Controller
-              control={control}
-              name="scheduledTime"
-              render={({ field: { onChange, onBlur, value, ref } }) => (
-                <>
-                  <Input
-                    ref={ref}
-                    label="Start time"
-                    placeholder="HH:MM e.g. 09:00"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={errors.scheduledTime?.message}
-                    leftIcon="time-outline"
-                    isRequired
-                  />
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.timeSlotsRow}
-                  >
-                    {TIME_SLOTS.map((slot) => (
-                      <TouchableOpacity
-                        key={slot}
-                        style={[styles.timeChip, watchedTime === slot && styles.timeChipActive]}
-                        onPress={() => onChange(slot)}
-                      >
-                        <Text style={[styles.timeChipLabel, watchedTime === slot && styles.timeChipLabelActive]}>
-                          {slot}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </>
-              )}
-            />
+            {/* DATE PICKER */}
+            <View>
+              <Text style={styles.fieldLabel}>
+                Date <Text style={styles.required}>*</Text>
+              </Text>
+              <TouchableOpacity
+                style={styles.pickerField}
+                onPress={() => { setShowDatePicker(true); setShowTimePicker(false); }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
+                <Text style={dateValue ? styles.pickerText : styles.pickerPlaceholder}>
+                  {dateValue ? formatDisplayDate(dateValue) : 'Select date'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            {/* DURATION — string field, no type conflict */}
+            {/* TIME PICKER */}
+            <View>
+              <Text style={styles.fieldLabel}>
+                Start time <Text style={styles.required}>*</Text>
+              </Text>
+              <TouchableOpacity
+                style={styles.pickerField}
+                onPress={() => { setShowTimePicker(true); setShowDatePicker(false); }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="time-outline" size={18} color={COLORS.textSecondary} />
+                <Text style={timeValue ? styles.pickerText : styles.pickerPlaceholder}>
+                  {timeValue ? formatHHMM(timeValue) : 'Select time'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* DURATION */}
             <Controller
               control={control}
               name="durationHours"
@@ -274,10 +275,16 @@ export default function BookingScreen() {
               )}
             />
 
-            {error && (
+            {error !== '' && (
+              <View style={styles.errorBox}>
+                <Text style={styles.validationErrorText}>{error}</Text>
+              </View>
+            )}
+
+            {apiError && (
               <View style={styles.apiError}>
                 <Text style={styles.apiErrorText}>
-                  {(error as any)?.message ?? 'Booking failed. Please try again.'}
+                  {(apiError as any)?.message ?? 'Booking failed. Please try again.'}
                 </Text>
               </View>
             )}
@@ -291,12 +298,38 @@ export default function BookingScreen() {
             />
           </View>
         </ScrollView>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={dateValue ?? new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            minimumDate={new Date()}
+            onChange={(event, selected) => {
+              setShowDatePicker(false);
+              if (event.type !== 'dismissed' && selected) setDateValue(selected);
+            }}
+          />
+        )}
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={timeValue ?? new Date()}
+            mode="time"
+            is24Hour
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selected) => {
+              setShowTimePicker(false);
+              if (event.type !== 'dismissed' && selected) setTimeValue(selected);
+            }}
+          />
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   flex: { flex: 1 },
   header: {
@@ -325,21 +358,55 @@ const styles = StyleSheet.create({
   },
   summaryProvider: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
   form: { gap: SPACING.md },
-  timeSlotsRow: { gap: SPACING.sm, paddingBottom: SPACING.xs },
-  timeChip: {
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
-    borderRadius: SPACING.borderRadius.full,
-    borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+  fieldLabel: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
   },
-  timeChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  timeChipLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
-  timeChipLabelActive: { color: COLORS.white },
+  required: { color: COLORS.danger },
+  pickerField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.inputBackground,
+    borderRadius: SPACING.borderRadius.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    minHeight: 48,
+  },
+  pickerText: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.fontSize.md,
+    color: COLORS.textPrimary,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+  },
+  pickerPlaceholder: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.fontSize.md,
+    color: COLORS.textTertiary,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+  },
   apiError: {
-    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
+    backgroundColor: COLORS.errorBg, borderWidth: 1, borderColor: COLORS.errorBorder,
     borderRadius: SPACING.borderRadius.md, padding: SPACING.md,
   },
   apiErrorText: { color: COLORS.danger, fontSize: TYPOGRAPHY.fontSize.sm, textAlign: 'center' },
+  errorBox: {
+    backgroundColor: COLORS.errorBg,
+    borderWidth: 1,
+    borderColor: COLORS.errorBorder,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  validationErrorText: {
+    color: COLORS.errorText,
+    fontSize: 14,
+    textAlign: 'center',
+  },
   errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.md },
   errorText: { fontSize: TYPOGRAPHY.fontSize.lg, color: COLORS.textPrimary },
 });

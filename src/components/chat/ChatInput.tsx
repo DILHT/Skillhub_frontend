@@ -1,11 +1,12 @@
-// src/components/chat/ChatInput.tsx
+﻿// src/components/chat/ChatInput.tsx
 
 import React, { useState } from 'react';
 import {
   View, TextInput, TouchableOpacity, StyleSheet, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../../constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
 
@@ -15,6 +16,9 @@ interface ChatInputProps {
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onTyping }) => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
+
   const [text, setText] = useState('');
 
   const handleSend = () => {
@@ -66,7 +70,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onTyping }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   container: {
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,

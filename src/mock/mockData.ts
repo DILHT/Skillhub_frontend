@@ -65,18 +65,18 @@ export function mockPaginatedServices(
 export const MOCK_CLIENT_USER: User = {
   id: 'user-dev-001', email: 'dev@skillhub.mw', phone: '+265991234567',
   firstName: 'Dev', lastName: 'User', avatar: null, role: 'client',
-  kycStatus: 'verified', isVerified: true, rating: null, createdAt: '2024-01-01T00:00:00Z',
+  kycStatus: 'APPROVED', isVerified: true, rating: null, createdAt: '2024-01-01T00:00:00Z',
 };
 
 export const MOCK_PROVIDER_USER: User = {
   id: 'user-dev-002', email: 'provider@skillhub.mw', phone: '+265991234568',
   firstName: 'Chisomo', lastName: 'Phiri', avatar: 'https://i.pravatar.cc/150?img=11',
-  role: 'provider', kycStatus: 'verified', isVerified: true, rating: 4.9, createdAt: '2024-01-01T00:00:00Z',
+  role: 'provider', kycStatus: 'APPROVED', isVerified: true, rating: 4.9, createdAt: '2024-01-01T00:00:00Z',
 };
 
 export const MOCK_AUTH_RESPONSE: AuthResponse = {
-  user: MOCK_CLIENT_USER,
-  token: 'mock-jwt-token-dev-only',
+  user: { id: MOCK_CLIENT_USER.id, email: MOCK_CLIENT_USER.email, role: MOCK_CLIENT_USER.role },
+  accessToken: 'mock-jwt-token-dev-only',
   refreshToken: 'mock-refresh-token-dev-only',
 };
 

@@ -1,4 +1,4 @@
-// src/screens/booking/BookingConfirmScreen.tsx
+﻿// src/screens/booking/BookingConfirmScreen.tsx
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -9,14 +9,17 @@ import { useBookingDetail } from '@/hooks/useBooking';
 import { Button } from '@/components/common';
 import { StatusBadge } from '@/components/booking/StatusBadge';
 import { BookingStackParamList } from '@/navigation/AppNavigator';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
-import { format, parseISO } from 'date-fns';
+import { safeFormatDate } from '@/utils/dateHelpers';
 
 type RouteProps = RouteProp<BookingStackParamList, 'BookingConfirm'>;
 
 export default function BookingConfirmScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProps>();
   const { bookingId } = route.params;
@@ -52,7 +55,7 @@ export default function BookingConfirmScreen() {
             <View style={styles.summaryRow}>
               <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
               <Text style={styles.summaryText}>
-                {format(parseISO(booking.scheduledDate), 'EEEE, d MMMM yyyy')} at {booking.scheduledTime}
+                {safeFormatDate(booking.scheduledDate, 'EEEE, d MMMM yyyy')} at {booking.scheduledTime}
               </Text>
             </View>
 
@@ -77,7 +80,6 @@ export default function BookingConfirmScreen() {
           <Button
             label="View My Bookings"
             onPress={() => {
-              // Navigate to the Bookings tab and reset its stack
               navigation.navigate('BookingsTab', { screen: 'BookingList' });
             }}
             fullWidth size="lg"
@@ -94,7 +96,7 @@ export default function BookingConfirmScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   container: {
     flex: 1, alignItems: 'center', padding: SPACING.screenPadding,

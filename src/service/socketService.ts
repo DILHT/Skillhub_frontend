@@ -48,17 +48,6 @@ export const socketService = {
       reconnectionDelay: 2000,  // Wait 2s between retries (good for mobile)
     }) as AppSocket;
 
-    socket.on('connect', () => {
-      console.log('[Socket] Connected:', socket?.id);
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('[Socket] Disconnected:', reason);
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('[Socket] Connection error:', err.message);
-    });
 
     return socket;
   },

@@ -11,7 +11,7 @@ import { apiClient } from './api';
 import { Conversation, Message } from '../types/chat.types';
 import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '../mock/mockData';
 
-const IS_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
+const IS_MOCK = true;
 
 function mockDelay(ms = 500): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

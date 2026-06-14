@@ -1,12 +1,16 @@
-import React from 'react';
+﻿// src/screens/auth/LoginScreen.tsx
+
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,132 +19,112 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Button, Input } from '@/components/common';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
-import { useAuthStore } from '@/store/authStore'; // add this import
-import { MOCK_AUTH_RESPONSE, MOCK_PROVIDER_USER } from '@/mock/mockData';
+import { useAuthStore } from '@/store/authStore';
+import { MOCK_CLIENT_USER, MOCK_PROVIDER_USER } from '@/mock/mockData';
+import { User } from '@/types/user.types';
 
-// ── ZOD SCHEMA ────────────────────────────────────────────────────────────────
-//
-// This schema defines BOTH the TypeScript type AND the validation rules.
-// One definition, two benefits.
-//
-// z.object() creates a schema for an object with these fields:
-//   email: must be a string, must be a valid email format
-//   password: must be a string, minimum 8 characters
- 
 const loginSchema = z.object({
   email: z
     .string()
     .min(1, 'Email is required')
     .email('Please enter a valid email'),
- 
   password: z
     .string()
     .min(1, 'Password is required')
     .min(8, 'Password must be at least 8 characters'),
 });
 
-
-// TypeScript type inferred FROM the schema — no duplication
-// LoginFormData = { email: string; password: string }
 type LoginFormData = z.infer<typeof loginSchema>;
- 
-// ── COMPONENT ─────────────────────────────────────────────────────────────────
- 
-export default function LoginScreen() {
-  const navigation = useNavigation<any>();
-  const { login, isLoggingIn, loginError } = useAuth(); // Our custom hook
-  const { setUser } = useAuthStore();
 
-  // Add this function inside the component:
-const handleDevLogin = (role: 'client' | 'provider') => {
-  // Bypass the API completely — inject mock user directly into the store.
-  // RootNavigator sees isAuthenticated = true → shows AppNavigator instantly.
-  const user = role === 'provider'
-    ? MOCK_PROVIDER_USER
-    : MOCK_AUTH_RESPONSE.user;
-  setUser(user, 'dev-token');
-};
- 
-  // ── FORM SETUP ─────────────────────────────────────────────────────────────
-  //
-  // useForm initializes the form with:
-  //   resolver: zodResolver(loginSchema) — connects zod validation to the form
-  //   defaultValues: initial values for each field
-  //
-  // The hook returns functions and objects we use to control the form:
-  //   control: connects <Controller> to this form
-  //   handleSubmit: wraps our onSubmit with validation
-  //   formState.errors: validation errors for each field
- 
+function isEmailVerificationError(message?: string) {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('unverified') ||
+    (normalized.includes('email') &&
+      (normalized.includes('verify') ||
+        normalized.includes('verified') ||
+        normalized.includes('verification')))
+  );
+}
+
+export default function LoginScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
+  const devStyles = makeDevStyles(COLORS, isDark);
+  const navigation = useNavigation<any>();
+  const { login, isLoggingIn, loginError } = useAuth({
+    onEmailNotVerified: (email) => {
+      navigation.navigate('OTP', { email, canResendImmediately: true });
+    },
+  });
+  const { setUser, logoutReason, clearLogoutReason } = useAuthStore();
+
+  useEffect(() => {
+    if (logoutReason) {
+      Alert.alert('Signed Out', logoutReason);
+      clearLogoutReason();
+    }
+  }, []);
+
+  // ── DEV BYPASS ─────────────────────────────────────────────────────────────
+  // FIX: Import MOCK_CLIENT_USER and MOCK_PROVIDER_USER directly.
+  // Both are typed as User (not AuthUser | undefined), so setUser() accepts them.
+  // Previously the code used MOCK_AUTH_RESPONSE.user which is typed as
+  // AuthUser | undefined — that caused the TypeScript error.
+  const handleDevLogin = (role: 'client' | 'provider') => {
+    const user: User = role === 'provider' ? MOCK_PROVIDER_USER : MOCK_CLIENT_USER;
+    setUser(user, 'dev-token');
+  };
+
   const {
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+    defaultValues: { email: '', password: '' },
   });
- 
-  // ── SUBMIT HANDLER ─────────────────────────────────────────────────────────
-  //
-  // handleSubmit() from react-hook-form:
-  //   1. Runs zod validation on all fields
-  //   2. If validation FAILS → populates errors, does NOT call our function
-  //   3. If validation PASSES → calls our function with the validated data
-  //
-  // Notice how clean this is: we just call login() with the data.
-  // Loading, error, navigation — all handled by the useAuth hook.
- 
+
+  const currentEmail = watch('email').trim().toLowerCase();
+  const showVerifyEmailAction = isEmailVerificationError(loginError);
+
   const onSubmit = (data: LoginFormData) => {
-    login(data);
+    login({ ...data, email: data.email.trim().toLowerCase() });
   };
- 
-  // ── RENDER ─────────────────────────────────────────────────────────────────
- 
+
   return (
-    <SafeAreaView style={screenStyles.safeArea}>
-      {/*
-        KeyboardAvoidingView: Moves the form up when keyboard appears,
-        so the active input is never hidden behind it.
-        Platform.OS === 'ios' uses 'padding', Android uses 'height'.
-      */}
+    <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        style={screenStyles.flex}
+        style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
-          style={screenStyles.flex}
-          contentContainerStyle={screenStyles.scrollContent}
-          keyboardShouldPersistTaps="handled" // Tap outside keyboard dismisses it
+          style={styles.flex}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
- 
-          {/* ── HEADER ─────────────────────────────────────────────────── */}
-          <View style={screenStyles.header}>
-            {/* Replace this with your actual logo */}
-            <View style={screenStyles.logoPlaceholder}>
-              <Text style={screenStyles.logoText}>S</Text>
-            </View>
-            <Text style={screenStyles.title}>Welcome back</Text>
-            <Text style={screenStyles.subtitle}>
+          {/* HEADER */}
+          <View style={styles.header}>
+            <Image
+                source={require('../../../assets/logo.jpg')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            <Text style={styles.title}>Welcome back</Text>
+            <Text style={styles.subtitle}>
               Sign in to find or offer services
             </Text>
           </View>
- 
-          {/* ── FORM ───────────────────────────────────────────────────── */}
-          <View style={screenStyles.form}>
- 
-            {/*
-              Controller bridges react-hook-form with our custom Input.
-              It passes: value, onChange (onChangeText), onBlur, ref
-              to whatever component is returned from render().
-            */}
+
+          {/* FORM */}
+          <View style={styles.form}>
             <Controller
               control={control}
               name="email"
@@ -152,17 +136,17 @@ const handleDevLogin = (role: 'client' | 'provider') => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
-                  returnKeyType="next"  // Shows "Next" on keyboard
+                  returnKeyType="next"
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
-                  error={errors.email?.message} // Zod error message
+                  error={errors.email?.message}
                   leftIcon="mail-outline"
                   isRequired
                 />
               )}
             />
- 
+
             <Controller
               control={control}
               name="password"
@@ -171,7 +155,7 @@ const handleDevLogin = (role: 'client' | 'provider') => {
                   ref={ref}
                   label="Password"
                   placeholder="Enter your password"
-                  secureTextEntry   // Triggers password visibility toggle in Input
+                  secureTextEntry
                   autoComplete="password"
                   returnKeyType="done"
                   value={value}
@@ -183,112 +167,103 @@ const handleDevLogin = (role: 'client' | 'provider') => {
                 />
               )}
             />
- 
-            {/* Forgot password link */}
+
             <TouchableOpacity
               onPress={() => navigation.navigate('ForgotPassword')}
-              style={screenStyles.forgotPassword}
+              style={styles.forgotPassword}
             >
-              <Text style={screenStyles.forgotPasswordText}>
+              <Text style={styles.forgotPasswordText}>
                 Forgot password?
               </Text>
             </TouchableOpacity>
- 
-            {/*
-              API Error Display
-              loginError comes from our useAuth hook (the API error message).
-              Form validation errors are shown inline in each Input.
-              API errors (wrong password, account not found) are shown here.
-            */}
+
             {loginError && (
-              <View style={screenStyles.apiErrorBox}>
-                <Text style={screenStyles.apiErrorText}>{loginError}</Text>
+              <View style={styles.apiErrorBox}>
+                <Text style={styles.apiErrorText}>{loginError}</Text>
+                {showVerifyEmailAction && (
+                  <TouchableOpacity
+                    style={[
+                      styles.verifyEmailAction,
+                      currentEmail === '' && styles.verifyEmailActionDisabled,
+                    ]}
+                    disabled={currentEmail === ''}
+                    onPress={() => navigation.navigate('OTP', {
+                      email: currentEmail,
+                      canResendImmediately: true,
+                    })}
+                  >
+                    <Text style={styles.verifyEmailActionText}>
+                      {currentEmail === '' ? 'Enter email to verify' : 'Verify email'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
- 
-            {/* Submit button */}
+
             <Button
               label="Sign in"
               onPress={handleSubmit(onSubmit)}
               isLoading={isLoggingIn}
               fullWidth
               size="lg"
-              style={screenStyles.submitButton}
+              style={styles.submitButton}
             />
 
-            {__DEV__ && (
-            <View style={devStyles.container}>
-              <View style={devStyles.divider}>
-                <View style={devStyles.line} />
-                <Text style={devStyles.dividerLabel}>DEV ONLY</Text>
-                <View style={devStyles.line} />
+            {/* DEV ONLY bypass buttons */}
+            {(__DEV__ || process.env.EXPO_PUBLIC_USE_MOCK === 'true') && (
+              <View style={devStyles.container}>
+                <View style={devStyles.divider}>
+                  <View style={devStyles.line} />
+                  <Text style={devStyles.dividerLabel}>DEV ONLY</Text>
+                  <View style={devStyles.line} />
+                </View>
+                <View style={devStyles.buttonRow}>
+                  <TouchableOpacity
+                    style={devStyles.devButton}
+                    onPress={() => handleDevLogin('client')}
+                  >
+                    <Text style={devStyles.devButtonText}>Login as Client</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[devStyles.devButton, devStyles.devButtonProvider]}
+                    onPress={() => handleDevLogin('provider')}
+                  >
+                    <Text style={devStyles.devButtonText}>Login as Provider</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={devStyles.buttonRow}>
-                <TouchableOpacity
-                  style={devStyles.devButton}
-                  onPress={() => handleDevLogin('client')}
-                >
-                  <Text style={devStyles.devButtonText}>Login as Client</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[devStyles.devButton, devStyles.devButtonProvider]}
-                  onPress={() => handleDevLogin('provider')}
-                >
-                  <Text style={devStyles.devButtonText}>Login as Provider</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
- 
+            )}
           </View>
- 
-          {/* ── FOOTER ─────────────────────────────────────────────────── */}
-          <View style={screenStyles.footer}>
-            <Text style={screenStyles.footerText}>
+
+          {/* FOOTER */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
               Don't have an account?{' '}
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={screenStyles.footerLink}>Create account</Text>
+              <Text style={styles.footerLink}>Create account</Text>
             </TouchableOpacity>
           </View>
- 
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
- 
-const screenStyles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  flex: {
-    flex: 1,
-  },
+
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  flex: { flex: 1 },
   scrollContent: {
-    flexGrow: 1,              // Makes content fill screen even when short
+    flexGrow: 1,
     padding: SPACING.screenPadding,
-    justifyContent: 'center', // Centers form on large screens
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: SPACING.xxl,
-  },
-  logoPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: SPACING.borderRadius.lg,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.lg,
   },
-  logoText: {
-    fontSize: 28,
-    fontFamily: 'System',
-    color: COLORS.white,
-  },
+  header: { alignItems: 'center', marginBottom: SPACING.xxl },
+  logo: {
+  width: 120,
+  height: 120,
+  marginBottom: SPACING.lg,
+},
   title: {
     fontSize: TYPOGRAPHY.fontSize.xxl,
     fontFamily: 'System',
@@ -300,21 +275,17 @@ const screenStyles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
   },
-  form: {
-    gap: SPACING.md,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-  },
+  form: { gap: SPACING.md },
+  forgotPassword: { alignSelf: 'flex-end' },
   forgotPasswordText: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     color: COLORS.primary,
     fontFamily: 'System',
   },
   apiErrorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: COLORS.errorBg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: COLORS.errorBorder,
     borderRadius: SPACING.borderRadius.md,
     padding: SPACING.md,
   },
@@ -323,9 +294,25 @@ const screenStyles = StyleSheet.create({
     fontSize: TYPOGRAPHY.fontSize.sm,
     textAlign: 'center',
   },
-  submitButton: {
+  verifyEmailAction: {
+    alignSelf: 'center',
     marginTop: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: SPACING.borderRadius.md,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
+  verifyEmailActionDisabled: {
+    opacity: 0.5,
+  },
+  verifyEmailActionText: {
+    color: COLORS.primary,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+  },
+  submitButton: { marginTop: SPACING.sm },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -333,49 +320,33 @@ const screenStyles = StyleSheet.create({
     marginTop: SPACING.xxl,
     paddingBottom: SPACING.md,
   },
-  footerText: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.textSecondary,
-  },
-  footerLink: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.primary,
-    fontFamily: 'System',
-  },
+  footerText: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
+  footerLink: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.primary, fontFamily: 'System' },
 });
 
-const devStyles = StyleSheet.create({
-  container: {
-    marginTop: SPACING.md,
-  },
+const makeDevStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
+  container: { marginTop: SPACING.md },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
     marginBottom: SPACING.md,
   },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.divider,
-  },
+  line: { flex: 1, height: 1, backgroundColor: COLORS.divider },
   dividerLabel: {
     fontSize: TYPOGRAPHY.fontSize.xs,
     color: COLORS.textTertiary,
     fontFamily: TYPOGRAPHY.fontFamily.medium,
     letterSpacing: 0.5,
   },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-  },
+  buttonRow: { flexDirection: 'row', gap: SPACING.md },
   devButton: {
     flex: 1,
     paddingVertical: SPACING.sm,
     borderRadius: SPACING.borderRadius.md,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.warningBg,
     borderWidth: 1,
-    borderColor: '#FCD34D',
+    borderColor: COLORS.warningBorder,
     alignItems: 'center',
   },
   devButtonProvider: {
@@ -385,6 +356,6 @@ const devStyles = StyleSheet.create({
   devButtonText: {
     fontSize: TYPOGRAPHY.fontSize.xs,
     fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: '#78350F',
+    color: COLORS.warningText,
   },
 });

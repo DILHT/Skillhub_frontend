@@ -1,38 +1,46 @@
 // App.tsx
-// PURPOSE: The entry point of the entire application.
-// RULE: This file only sets up "providers" — wrappers that give
-// the whole app access to navigation, data fetching, and state.
-// It should contain ZERO business logic.
+// Added: ErrorBoundary wrapping entire app
+// Added: OfflineBanner for no-internet detection
+// Note: install @react-native-community/netinfo first:
+//   npx expo install @react-native-community/netinfo
 
 import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ErrorBoundary } from './src/components/common/ErrorBoundary';
+import { OfflineBanner } from './src/components/common/OfflineBanner';
 import RootNavigator from './src/navigation';
+import { ThemeProvider } from './src/context/ThemeContext';
 
-// Create the React Query client once at the app level.
-// This manages ALL your API call caching and loading states.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,          // Retry failed requests twice (good for low-bandwidth Africa networks)
-      staleTime: 30000,  // Consider data fresh for 30 seconds before refetching
+      retry: 1,
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      gcTime: 10 * 60 * 1000,   // 10 minutes
+    },
+    mutations: {
+      retry: false,
     },
   },
 });
 
 export default function App() {
   return (
-    // SafeAreaProvider: handles iPhone notches and Android status bars
-    <SafeAreaProvider>
-      {/* QueryClientProvider: gives every component access to useQuery/useMutation */}
-      <QueryClientProvider client={queryClient}>
-        {/* NavigationContainer: the root container for ALL navigation */}
-        <NavigationContainer>
-          {/* RootNavigator decides: show Auth screens OR show Main app */}
-          <RootNavigator />
-        </NavigationContainer>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <NavigationContainer>
+              <StatusBar style="auto" />
+              <OfflineBanner />
+              <RootNavigator />
+            </NavigationContainer>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

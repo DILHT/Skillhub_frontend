@@ -1,16 +1,17 @@
-// =============================================================================
+﻿// =============================================================================
 // FILE 3: src/components/service/RatingStars.tsx
 // =============================================================================
 //
 // Renders 1-5 stars. The "partial star" logic handles ratings like 4.3.
 // Used in ServiceCard, ProviderProfile, ReviewItem.
- 
+
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../../constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
- 
+
 interface RatingStarsProps {
   rating: number;           // e.g. 4.3
   reviewCount?: number;     // e.g. 127 — shown as "(127)"
@@ -18,7 +19,7 @@ interface RatingStarsProps {
   showCount?: boolean;
   compact?: boolean;        // If true: just shows "4.3 ★" inline
 }
- 
+
 export const RatingStars: React.FC<RatingStarsProps> = ({
   rating,
   reviewCount,
@@ -26,10 +27,13 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
   showCount = true,
   compact = false,
 }) => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const ratingStyles = makeStyles(COLORS, isDark);
+
   if (compact) {
     return (
       <View style={ratingStyles.compact}>
-        <Ionicons name="star" size={size} color="#F59E0B" />
+        <Ionicons name="star" size={size} color={COLORS.warning} />
         <Text style={[ratingStyles.compactText, { fontSize: size }]}>
           {rating.toFixed(1)}
           {showCount && reviewCount !== undefined ? ` (${reviewCount})` : ''}
@@ -37,7 +41,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
       </View>
     );
   }
- 
+
   // Full star display: 5 icons, each either full, half, or empty
   return (
     <View style={ratingStyles.row}>
@@ -53,7 +57,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
             iconName = 'star-outline';    // Empty star
           }
           return (
-            <Ionicons key={star} name={iconName} size={size} color="#F59E0B" />
+            <Ionicons key={star} name={iconName} size={size} color={COLORS.warning} />
           );
         })}
       </View>
@@ -63,8 +67,8 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
     </View>
   );
 };
- 
-const ratingStyles = StyleSheet.create({
+
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

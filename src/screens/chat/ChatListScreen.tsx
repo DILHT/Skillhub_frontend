@@ -1,4 +1,4 @@
-// src/screens/chat/ChatListScreen.tsx
+﻿// src/screens/chat/ChatListScreen.tsx
 
 import React from 'react';
 import {
@@ -11,12 +11,15 @@ import { useConversations } from '@/hooks/useChat';
 import { ConversationItem } from '@/components/chat/ConversationItem';
 import { Skeleton } from '@/components/common/Skeleton';
 import { Conversation } from '@/types/chat.types';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
 import { useState } from 'react';
 
 export default function ChatListScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -95,7 +98,7 @@ export default function ChatListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   header: {
     flexDirection: 'row',

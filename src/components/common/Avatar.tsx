@@ -1,18 +1,20 @@
-// =============================================================================
+﻿// =============================================================================
 // FILE 1: src/components/common/Avatar.tsx
 // =============================================================================
 //
 // Displays a user photo, or falls back to initials if no photo exists.
 // Used in ServiceCard (provider photo), ChatList, ProfileScreen.
 // This is a classic reusable component — built once, used everywhere.
- 
+
 import React from 'react';
-import { View, Text, Image, StyleSheet, ViewStyle } from 'react-native';
-import { COLORS } from '../../constants/colors';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { useAppTheme } from '@/context/ThemeContext';
+import { SmartImage } from '@/components/common/SmartImage';
+import { AppColors } from '@/constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
- 
+
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
- 
+
 interface AvatarProps {
   uri?: string | null;       // Image URL from backend
   name?: string;             // Full name — used to generate initials
@@ -20,7 +22,7 @@ interface AvatarProps {
   style?: ViewStyle;
   showVerifiedBadge?: boolean; // Show green checkmark for KYC-verified providers
 }
- 
+
 // Extract initials from a name: "John Banda" → "JB", "Alice" → "A"
 function getInitials(name: string): string {
   return name
@@ -29,7 +31,7 @@ function getInitials(name: string): string {
     .slice(0, 2)              // Maximum 2 initials
     .join('');
 }
- 
+
 // Map size prop to pixel dimensions
 const AVATAR_SIZES: Record<AvatarSize, number> = {
   xs: 24,
@@ -38,7 +40,7 @@ const AVATAR_SIZES: Record<AvatarSize, number> = {
   lg: 52,
   xl: 72,
 };
- 
+
 const FONT_SIZES: Record<AvatarSize, number> = {
   xs: 9,
   sm: 12,
@@ -46,7 +48,7 @@ const FONT_SIZES: Record<AvatarSize, number> = {
   lg: 18,
   xl: 26,
 };
- 
+
 export const Avatar: React.FC<AvatarProps> = ({
   uri,
   name = '',
@@ -54,25 +56,27 @@ export const Avatar: React.FC<AvatarProps> = ({
   style,
   showVerifiedBadge = false,
 }) => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const avatarStyles = makeStyles(COLORS, isDark);
+
   const dimension = AVATAR_SIZES[size];
   const fontSize = FONT_SIZES[size];
   const initials = getInitials(name);
- 
+
   // Badge should be about 28% of avatar size, minimum 12px
   const badgeSize = Math.max(12, Math.round(dimension * 0.28));
- 
+
   return (
     <View style={[avatarStyles.container, style]}>
       {uri ? (
         // If we have a URL, show the image
-        <Image
-          source={{ uri }}
+        <SmartImage
+          uri={uri}
           style={[
             avatarStyles.image,
             { width: dimension, height: dimension, borderRadius: dimension / 2 },
           ]}
-          // resizeMode="cover" crops the image to fill the circle
-          resizeMode="cover"
+          fallbackIcon="person-outline"
         />
       ) : (
         // Fallback: coloured circle with initials
@@ -92,7 +96,7 @@ export const Avatar: React.FC<AvatarProps> = ({
           <Text style={[avatarStyles.initials, { fontSize }]}>{initials}</Text>
         </View>
       )}
- 
+
       {/* Verified badge — only shown for KYC-verified providers */}
       {showVerifiedBadge && (
         <View
@@ -111,7 +115,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     </View>
   );
 };
- 
+
 // Generate a consistent background color from a name string.
 // Same name always produces the same colour — important for UX consistency.
 function getAvatarColor(name: string): string {
@@ -123,8 +127,8 @@ function getAvatarColor(name: string): string {
   const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];
 }
- 
-const avatarStyles = StyleSheet.create({
+
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   container: {
     position: 'relative',  // Required for the absolute-positioned badge
   },
@@ -141,7 +145,7 @@ const avatarStyles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    backgroundColor: '#22C55E', // Green = verified
+    backgroundColor: COLORS.success, // Green = verified
     borderWidth: 1.5,
     borderColor: COLORS.white,
   },

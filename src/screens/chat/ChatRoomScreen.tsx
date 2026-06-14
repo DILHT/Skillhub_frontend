@@ -1,9 +1,10 @@
-// src/screens/chat/ChatRoomScreen.tsx
+﻿// src/screens/chat/ChatRoomScreen.tsx
 
 import React, { useEffect, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -16,13 +17,16 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { Avatar } from '@/components/common/Avatar';
 import { ChatStackParamList } from '@/navigation/AppNavigator';
 import { Message } from '@/types/chat.types';
-import { COLORS } from '@/constants/colors';
+import { useAppTheme } from '@/context/ThemeContext';
+import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
 
 type RouteProps = RouteProp<ChatStackParamList, 'ChatRoom'>;
 
 export default function ChatRoomScreen() {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const styles = makeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProps>();
   const { conversationId, recipientName } = route.params;
@@ -105,7 +109,17 @@ export default function ChatRoomScreen() {
           </View>
 
           {/* Future: call button, info button */}
-          <TouchableOpacity style={styles.headerAction}>
+          <TouchableOpacity style={styles.headerAction}
+          onPress={() => Alert.alert(
+              'Options',
+              '',
+              [
+                { text: 'View Profile', onPress: () => {} },
+                { text: 'Block User', style: 'destructive', onPress: () => {} },
+                { text: 'Cancel', style: 'cancel' },
+              ]
+            )}
+          >
             <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
@@ -144,7 +158,7 @@ export default function ChatRoomScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   flex: { flex: 1 },
 
