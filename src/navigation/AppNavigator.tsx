@@ -10,7 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '@/context/ThemeContext';
 import { TYPOGRAPHY } from '../constants/typography';
-
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeScreen from '../screens/home/HomeScreen';
 import SearchScreen from '../screens/home/SearchScreen';
 import ServiceDetailScreen from '../screens/home/ServiceDetailScreen';
@@ -165,6 +165,7 @@ const Tab = createBottomTabNavigator();
 
 export default function AppNavigator() {
   const { colors: COLORS, isDark } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -175,7 +176,7 @@ export default function AppNavigator() {
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? (tab?.iconFocused ?? 'home') : (tab?.icon ?? 'home-outline')}
-              size={size}
+              size={21}
               color={color}
             />
           ),
@@ -185,7 +186,7 @@ export default function AppNavigator() {
             backgroundColor: COLORS.tabBar,
             borderTopColor: COLORS.tabBarBorder,
             borderTopWidth: 1,
-            height: 60,
+            height: 60 + insets.bottom,
             paddingBottom: 6,
             paddingTop: 4,
           },
