@@ -17,33 +17,34 @@
 //   3. Price formatting for multiple African currencies
 //   4. How navigation works FROM a reusable component
 
-import React, { memo } from 'react';
+import React, { memo } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { Service } from '../../types/service.types';
-import { SmartImage } from '@/components/common/SmartImage';
-import { Avatar } from '../common/Avatar';
-import { RatingStars } from './RatingStars';
-import { useAppTheme } from '@/context/ThemeContext';
-import { AppColors } from '@/constants/theme';
-import { SPACING } from '../../constants/spacing';
-import { TYPOGRAPHY } from '../../constants/typography';
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { Service } from "../../types/service.types";
+import { SmartImage } from "@/components/common/SmartImage";
+import { Avatar } from "../common/Avatar";
+import { RatingStars } from "./RatingStars";
+import { useAppTheme } from "@/context/ThemeContext";
+import { AppColors } from "@/constants/theme";
+import { SPACING } from "../../constants/spacing";
+import { TYPOGRAPHY } from "../../constants/typography";
+import { useShadows } from "@/constants/shadows";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-type CardVariant = 'vertical' | 'horizontal';
+type CardVariant = "vertical" | "horizontal";
 
 interface ServiceCardProps {
   service: Service;
   variant?: CardVariant;
-  onPress?: () => void;  // Optional override — default navigates to ServiceDetail
+  onPress?: () => void; // Optional override — default navigates to ServiceDetail
 }
 
 // ── PRICE FORMATTER ───────────────────────────────────────────────────────────
@@ -52,15 +53,19 @@ interface ServiceCardProps {
 // Handles 'negotiable' case: returns "Negotiable"
 // This logic belongs in formatters.ts, but included here for clarity
 
-function formatPrice(price: number, currency: string, unit: Service['priceUnit']): string {
-  if (unit === 'negotiable') return 'Negotiable';
+function formatPrice(
+  price: number,
+  currency: string,
+  unit: Service["priceUnit"],
+): string {
+  if (unit === "negotiable") return "Negotiable";
 
-  const formatted = new Intl.NumberFormat('en-MW', {
+  const formatted = new Intl.NumberFormat("en-MW", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(price);
 
-  const unitLabel = unit === 'hour' ? '/hr' : unit === 'day' ? '/day' : '';
+  const unitLabel = unit === "hour" ? "/hr" : unit === "day" ? "/day" : "";
   return `${currency} ${formatted}${unitLabel}`;
 }
 
@@ -70,30 +75,28 @@ function formatPrice(price: number, currency: string, unit: Service['priceUnit']
 // It does a shallow comparison of props before re-rendering.
 // If props haven't changed, the previous render result is reused.
 
-export const ServiceCard = memo<ServiceCardProps>(({
-  service,
-  variant = 'vertical',
-  onPress,
-}) => {
-  const navigation = useNavigation<any>();
+export const ServiceCard = memo<ServiceCardProps>(
+  ({ service, variant = "vertical", onPress }) => {
+    const navigation = useNavigation<any>();
 
-  const handlePress = () => {
-    if (onPress) {
-      onPress();
-    } else {
-      // Navigate to ServiceDetail, passing the service id as a route param
-      navigation.navigate('ServiceDetail', { serviceId: service.id });
+    const handlePress = () => {
+      if (onPress) {
+        onPress();
+      } else {
+        // Navigate to ServiceDetail, passing the service id as a route param
+        navigation.navigate("ServiceDetail", { serviceId: service.id });
+      }
+    };
+
+    if (variant === "horizontal") {
+      return <HorizontalCard service={service} onPress={handlePress} />;
     }
-  };
 
-  if (variant === 'horizontal') {
-    return <HorizontalCard service={service} onPress={handlePress} />;
-  }
+    return <VerticalCard service={service} onPress={handlePress} />;
+  },
+);
 
-  return <VerticalCard service={service} onPress={handlePress} />;
-});
-
-ServiceCard.displayName = 'ServiceCard';
+ServiceCard.displayName = "ServiceCard";
 
 // ── VERTICAL CARD (full-width, image on top) ─────────────────────────────────
 
@@ -103,10 +106,12 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
 }) => {
   const { colors: COLORS, isDark, cardStyle } = useAppTheme();
   const cardStyles = makeStyles(COLORS, isDark);
+  const shadows = useShadows(isDark);
+  const shadowStyle = isDark ? shadows.tinted.sm : shadows.lg;
 
   return (
     <TouchableOpacity
-      style={[cardStyles.verticalContainer, cardStyle]}
+      style={[cardStyles.verticalContainer, shadowStyle]}
       onPress={onPress}
       activeOpacity={0.92}
     >
@@ -140,7 +145,6 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
 
       {/* CONTENT SECTION */}
       <View style={cardStyles.verticalContent}>
-
         {/* Provider row */}
         <View style={cardStyles.providerRow}>
           <Avatar
@@ -153,7 +157,7 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
             {service.provider.firstName} {service.provider.lastName}
           </Text>
           <Text style={cardStyles.location} numberOfLines={1}>
-            · {service.provider.location}
+            {service.provider.location}
           </Text>
         </View>
 
@@ -170,6 +174,7 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
             compact
             size={12}
           />
+          <Text style={cardStyles.location}> • </Text>
           <View style={cardStyles.pricePill}>
             <Text style={cardStyles.price}>
               {formatPrice(service.price, service.currency, service.priceUnit)}
@@ -189,10 +194,12 @@ const HorizontalCard: React.FC<{ service: Service; onPress: () => void }> = ({
 }) => {
   const { colors: COLORS, isDark, cardStyle } = useAppTheme();
   const cardStyles = makeStyles(COLORS, isDark);
+  const shadows = useShadows(isDark);
+  const shadowStyle = isDark ? shadows.tinted.sm : shadows.lg;
 
   return (
     <TouchableOpacity
-      style={[cardStyles.horizontalContainer, cardStyle]}
+      style={[cardStyles.horizontalContainer, shadowStyle]}
       onPress={onPress}
       activeOpacity={0.92}
     >
@@ -202,124 +209,148 @@ const HorizontalCard: React.FC<{ service: Service; onPress: () => void }> = ({
         fallbackIcon="image-outline"
       />
       <View style={cardStyles.horizontalContent}>
-        <Text style={cardStyles.title} numberOfLines={2}>
+        <Text style={cardStyles.title} numberOfLines={1}>
           {service.title}
         </Text>
-        <RatingStars rating={service.rating} compact size={11} showCount={false} />
-        <Text style={cardStyles.price} numberOfLines={1}>
-          {formatPrice(service.price, service.currency, service.priceUnit)}
-        </Text>
+        <View style={cardStyles.providerRow}>
+          <RatingStars
+            rating={service.rating}
+            reviewCount={service.reviewCount}
+            compact
+            size={11}
+          />
+          <Text style={cardStyles.horizontalPrice} numberOfLines={1}>
+            • {formatPrice(service.price, service.currency, service.priceUnit)}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
 };
 
-
 // ── STYLES ────────────────────────────────────────────────────────────────────
 
-const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
-  // VERTICAL CARD
-  verticalContainer: {
-    borderRadius: SPACING.borderRadius.lg,
-    overflow: 'hidden',
-    marginBottom: SPACING.md,
-  },
-  imageWrapper: {
-    position: 'relative',
-  },
-  verticalImage: {
-    width: '100%',
-    height: 180,
-    backgroundColor: COLORS.border,
-  },
-  verticalContent: {
-    padding: SPACING.md,
-    gap: SPACING.xs,
-  },
-  providerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  providerName: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textSecondary,
-    flex: 1,
-  },
-  location: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textTertiary,
-  },
-  title: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-    lineHeight: 22,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: SPACING.xs,
-  },
-  pricePill: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-    borderRadius: SPACING.borderRadius.full,
-  },
-  price: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.primary,
-  },
+const makeStyles = (COLORS: AppColors, _isDark: boolean) =>
+  StyleSheet.create({
+    // VERTICAL CARD
+    verticalContainer: {
+      borderRadius: SPACING.borderRadius.md,
+      overflow: "hidden",
+      marginVertical: SPACING.sm,
+      backgroundColor: COLORS.surface,
+      borderWidth: 1,
+      borderColor: COLORS.divider,
+      paddingHorizontal: SPACING.sm,
+      paddingTop: SPACING.sm,
+      paddingBottom: SPACING.md,
+    },
+    imageWrapper: {
+      position: "relative",
+    },
+    verticalImage: {
+      width: "100%",
+      height: 180,
+      backgroundColor: COLORS.border,
+      borderRadius: SPACING.borderRadius.md,
+    },
+    verticalContent: {
+      paddingVertical: SPACING.md,
+      paddingHorizontal: SPACING.xs,
+      gap: SPACING.xs,
+    },
+    providerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+    },
+    providerName: {
+      fontSize: TYPOGRAPHY.fontSize.xs,
+      fontFamily: TYPOGRAPHY.fontFamily.medium,
+      color: COLORS.textSecondary,
+      flex: 1,
+    },
+    title: {
+      fontSize: TYPOGRAPHY.fontSize.sm,
+      fontFamily: TYPOGRAPHY.fontFamily.bold,
+      color: COLORS.textPrimary,
+      lineHeight: 22,
+    },
+    metaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: SPACING.xs,
+    },
+    location: {
+      fontSize: TYPOGRAPHY.fontSize.sm,
+      color: COLORS.textTertiary,
+      fontFamily: TYPOGRAPHY.fontFamily.medium,
+    },
+    pricePill: {},
+    price: {
+      fontSize: TYPOGRAPHY.fontSize.sm,
+      fontFamily: TYPOGRAPHY.fontFamily.medium,
+      color: COLORS.primary,
+    },
 
-  // BADGES (absolute positioned over image)
-  unavailableBadge: {
-    position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-    borderRadius: SPACING.borderRadius.full,
-  },
-  unavailableText: {
-    color: COLORS.white,
-    fontSize: TYPOGRAPHY.fontSize.xs,
-  },
-  distanceBadge: {
-    position: 'absolute',
-    bottom: SPACING.sm,
-    left: SPACING.sm,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-    borderRadius: SPACING.borderRadius.full,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  distanceText: {
-    color: COLORS.white,
-    fontSize: TYPOGRAPHY.fontSize.xs,
-  },
+    // BADGES (absolute positioned over image)
+    unavailableBadge: {
+      position: "absolute",
+      top: SPACING.sm,
+      right: SPACING.sm,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: 3,
+      borderRadius: SPACING.borderRadius.full,
+    },
+    unavailableText: {
+      color: COLORS.white,
+      fontSize: TYPOGRAPHY.fontSize.xs,
+    },
+    distanceBadge: {
+      position: "absolute",
+      bottom: SPACING.sm,
+      left: SPACING.sm,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: 3,
+      borderRadius: SPACING.borderRadius.full,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    distanceText: {
+      color: COLORS.white,
+      fontSize: TYPOGRAPHY.fontSize.xs,
+      fontFamily: TYPOGRAPHY.fontFamily.medium,
+    },
 
-  // HORIZONTAL CARD
-  horizontalContainer: {
-    width: SCREEN_WIDTH * 0.6,
-    borderRadius: SPACING.borderRadius.lg,
-    overflow: 'hidden',
-    marginRight: SPACING.md,
-  },
-  horizontalImage: {
-    width: '100%',
-    height: 120,
-    backgroundColor: COLORS.border,
-  },
-  horizontalContent: {
-    padding: SPACING.sm,
-    gap: 4,
-  },
-});
+    // HORIZONTAL CARD
+    horizontalContainer: {
+      width: SCREEN_WIDTH * 0.6,
+      borderRadius: SPACING.borderRadius.md,
+      overflow: "hidden",
+      marginRight: SPACING.md,
+      backgroundColor: COLORS.surface,
+      borderWidth: 1,
+      borderColor: COLORS.divider,
+      paddingHorizontal: SPACING.sm,
+      paddingTop: SPACING.sm,
+      paddingBottom: SPACING.md,
+    },
+    horizontalImage: {
+      width: "100%",
+      height: 140,
+      backgroundColor: COLORS.border,
+      borderRadius: SPACING.borderRadius.sm,
+    },
+    horizontalContent: {
+      paddingTop: SPACING.sm,
+      paddingHorizontal: 1,
+      gap: SPACING.sm,
+    },
+    horizontalPrice: {
+      fontFamily: TYPOGRAPHY.fontFamily.bold,
+      fontSize: TYPOGRAPHY.fontSize.xs,
+      color: COLORS.primary,
+    },
+  });

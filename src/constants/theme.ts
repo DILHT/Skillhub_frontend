@@ -31,6 +31,7 @@ export const lightColors = {
   background: '#F8FAFC',
   surface: '#FFFFFF',
   surfaceSecondary: '#F1F5F9',
+  shadow: '#F8FAFC',
   border: '#E2E8F0',
   divider: '#F1F5F9',
   inputBackground: '#F8FAFC',
@@ -82,9 +83,11 @@ export const darkColors = {
   background: '#111827',
   surface: '#1F2937',
   surfaceSecondary: '#374151',
+  shadow: '#9CA3AF',
   border: '#374151',
   divider: '#1F2937',
   inputBackground: '#374151',
+
 
   // Text — high contrast on dark grey
   textPrimary: '#F9FAFB',

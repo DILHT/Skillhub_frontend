@@ -3,6 +3,7 @@ export const TYPOGRAPHY = {
     regular: "Inter_400Regular",
     medium: "Inter_500Medium",
     bold: "Inter_600SemiBold",
+    extraBold: "Inter_700Bold",
   },
 
   fontSize: {
@@ -13,6 +14,7 @@ export const TYPOGRAPHY = {
     xl: 20,
     xxl: 24,
     xxxl: 30,
+    xxxxl: 36,
   },
 
   lineHeight: {
