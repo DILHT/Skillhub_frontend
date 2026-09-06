@@ -6,7 +6,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,9 +16,8 @@ import { Skeleton } from "@/components/common/Skeleton";
 import { Ionicons } from "@expo/vector-icons";
 import { Booking, BookingStatus } from "@/types/booking.types";
 import { useAppTheme } from "@/context/ThemeContext";
-import { AppColors } from "@/constants/theme";
 import { SPACING } from "@/constants/spacing";
-import { TYPOGRAPHY } from "@/constants/typography";
+import { makeBookingListStyles } from "@/styles/bookingList.styles";
 
 // Filter tabs shown at the top of the list
 const FILTER_TABS: { label: string; statuses: BookingStatus[] | null }[] = [
@@ -31,7 +29,7 @@ const FILTER_TABS: { label: string; statuses: BookingStatus[] | null }[] = [
 
 export default function BookingListScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
-  const styles = makeStyles(COLORS, isDark);
+  const styles = makeBookingListStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const [activeFilter, setActiveFilter] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -79,29 +77,48 @@ export default function BookingListScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Bookings</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons
+            name="chevron-back-outline"
+            size={20}
+            color={COLORS.textSecondary}
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>My Bookings</Text>
+        <View />
       </View>
 
       {/* FILTER TABS */}
-      <View style={styles.tabsRow}>
-        {FILTER_TABS.map((tab, index) => (
-          <TouchableOpacity
-            key={tab.label}
-            style={[styles.tab, activeFilter === index && styles.tabActive]}
-            onPress={() => setActiveFilter(index)}
-          >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeFilter === index && styles.tabLabelActive,
-              ]}
-            >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
+      <FlatList
+        data={FILTER_TABS}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsList}
+        contentContainerStyle={styles.tabsRow}
+        keyExtractor={(item) => item.label}
+        renderItem={({ item: tab, index }) => {
+          const isActive = activeFilter === index;
+
+          return (
+            <TouchableOpacity
+              style={[styles.tab, isActive && styles.tabActive]}
+              onPress={() => setActiveFilter(index)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[styles.tabLabel, isActive && styles.tabLabelActive]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        }}
+      />
+      
       {/* LIST */}
       <FlatList
         data={isLoading ? ([1, 2, 3] as any[]) : filtered}
@@ -161,100 +178,3 @@ export default function BookingListScreen() {
     </SafeAreaView>
   );
 }
-
-const makeStyles = (COLORS: AppColors, _isDark: boolean) =>
-  StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: COLORS.background },
-    header: {
-      padding: SPACING.screenPadding,
-      paddingBottom: SPACING.md,
-    },
-    headerTitle: {
-      fontSize: 36,
-      fontFamily: TYPOGRAPHY.fontFamily.extraBold,
-      color: COLORS.textPrimary,
-    },
-    tabsRow: {
-      flexDirection: "row",
-      // backgroundColor: COLORS.surface,
-      paddingHorizontal: SPACING.screenPadding,
-      paddingBottom: SPACING.md,
-      gap: SPACING.sm,
-      // borderBottomWidth: 1,
-      // borderBottomColor: COLORS.divider,
-    },
-    tab: {
-      paddingHorizontal: SPACING.lg,
-      paddingVertical: SPACING.sm,
-      borderRadius: SPACING.borderRadius.full,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-    },
-    tabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-    tabLabel: {
-      fontSize: TYPOGRAPHY.fontSize.sm,
-      color: COLORS.textSecondary,
-      fontFamily: TYPOGRAPHY.fontFamily.medium,
-    },
-    tabLabelActive: { color: COLORS.white },
-    listContent: { padding: SPACING.screenPadding, flexGrow: 1 },
-    skeletonCard: { marginBottom: SPACING.md },
-    emptyState: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingTop: SPACING.xxxl,
-      gap: SPACING.md,
-    },
-    emptyTitle: {
-      fontSize: TYPOGRAPHY.fontSize.lg,
-      fontFamily: TYPOGRAPHY.fontFamily.medium,
-      color: COLORS.textPrimary,
-    },
-    emptySubtitle: {
-      fontSize: TYPOGRAPHY.fontSize.sm,
-      color: COLORS.textSecondary,
-      textAlign: "center",
-    },
-    browseButton: {
-      backgroundColor: COLORS.primary,
-      paddingHorizontal: SPACING.xl,
-      paddingVertical: SPACING.sm,
-      borderRadius: SPACING.borderRadius.full,
-      marginTop: SPACING.sm,
-    },
-    browseButtonText: {
-      color: COLORS.white,
-      fontFamily: TYPOGRAPHY.fontFamily.medium,
-    },
-    centerState: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 32,
-      gap: 12,
-    },
-    errorStateTitle: {
-      fontSize: 17,
-      fontWeight: "600",
-      color: COLORS.textPrimary,
-    },
-    errorStateText: {
-      fontSize: 14,
-      color: COLORS.textSecondary,
-      textAlign: "center",
-      lineHeight: 20,
-    },
-    retryButton: {
-      marginTop: 8,
-      backgroundColor: COLORS.primary,
-      paddingHorizontal: 28,
-      paddingVertical: 12,
-      borderRadius: 999,
-    },
-    retryButtonText: {
-      color: COLORS.white,
-      fontSize: 15,
-      fontWeight: "600",
-    },
-  });
