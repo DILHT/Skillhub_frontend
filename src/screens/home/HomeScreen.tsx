@@ -1,13 +1,13 @@
 ﻿// src/screens/home/HomeScreen.tsx
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
   FlatList,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
+  Dimensions,
   RefreshControl,
   StatusBar,
   Image,
@@ -16,62 +16,32 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useHomeData, useServices } from "@/hooks/useServices";
+import { useHomeControls } from "@/hooks/useHome";
 import { useAuthStore } from "@/store/authStore";
 import { ServiceCard } from "@/components/service/ServiceCard";
 import { CategoryChip } from "@/components/service/CategoryChip";
-import { ServiceCardSkeleton, Skeleton, HorizontalServiceCardSkeleton } from "@/components/common/Skeleton";
+import {
+  ServiceCardSkeleton,
+  Skeleton,
+  HorizontalServiceCardSkeleton,
+} from "@/components/common/Skeleton";
 import { Button } from "@/components/common";
 import { Category, Service } from "@/types/service.types";
 import { useAppTheme } from "@/context/ThemeContext";
-import { AppColors } from "@/constants/theme";
 import { SPACING } from "@/constants/spacing";
-import { TYPOGRAPHY } from "@/constants/typography";
 import { useNotifications } from "@/hooks/useNotifications";
 import { ur } from "zod/v4/locales";
 import { Avatar } from "@/components/common/Avatar";
 import { getTimeOfDay } from "@/helpers/home.helpers";
 import { useShadows } from "@/constants/shadows";
+import { makeHomeStyles } from "@/styles/home.styles";
 
 export default function HomeScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
-  const shadows = useShadows(isDark);
-  const shadowStyle = isDark ? shadows.tinted.sm : shadows.lg;
-  const styles = makeStyles(COLORS, isDark);
+  const styles = makeHomeStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const user = useAuthStore((state) => state.user);
   const { unreadCount } = useNotifications();
-
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null,
-  );
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const categoriesScrollRef = useRef<ScrollView | null>(null);
-  const categoryLayoutsRef = useRef<
-    Record<string, { x: number; width: number }>
-  >({});
-
-  const scrollToSelectedCategory = useCallback(() => {
-    if (!categoriesScrollRef.current) {
-      return;
-    }
-
-    if (!selectedCategoryId) {
-      categoriesScrollRef.current.scrollTo({ x: 0, animated: true });
-      return;
-    }
-
-    const selectedLayout = categoryLayoutsRef.current[selectedCategoryId];
-    if (!selectedLayout) {
-      return;
-    }
-
-    const targetX = Math.max(0, selectedLayout.x - SPACING.md);
-    categoriesScrollRef.current.scrollTo({ x: targetX, animated: true });
-  }, [selectedCategoryId]);
-
-  useEffect(() => {
-    scrollToSelectedCategory();
-  }, [scrollToSelectedCategory]);
 
   const {
     data: homeData,
@@ -80,15 +50,21 @@ export default function HomeScreen() {
     refetch: refetchHome,
   } = useHomeData();
 
+  const {
+    selectedCategoryId,
+    isRefreshing,
+    categoriesScrollRef,
+    handleCategoriesContentSizeChange,
+    handleCategoriesLayout,
+    handleCategoryLayout,
+    handleCategoryPress,
+    handleSelectAll,
+    handleRefresh,
+  } = useHomeControls(refetchHome);
+
   const { data: filteredData, isLoading: isFilterLoading } = useServices(
     selectedCategoryId ? { categoryId: selectedCategoryId } : {},
   );
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await refetchHome();
-    setIsRefreshing(false);
-  }, [refetchHome]);
 
   if (isHomeError) {
     return (
@@ -128,53 +104,44 @@ export default function HomeScreen() {
       <View>
         {/* GREETING */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View>
-              <Text style={styles.greeting}>Good {getTimeOfDay()},</Text>
-              <Text style={styles.greetingName}>{displayName}</Text>
-            </View>
-          </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={[ styles.notifButton, shadowStyle]}
-              onPress={() => navigation.navigate("Notifications")}
-            >
-              <Ionicons
-                name="notifications"
-                size={24}
-                color={COLORS.textPrimary}
-              />
-              {unreadCount > 0 && (
-                <View style={styles.notifBadge}>
-                  <Text style={styles.notifBadgeText}>
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            <Avatar
-              uri={user?.profilePicture ?? user?.avatar}
-              name={displayName}
-              size="md"
+          {/* FAKE SEARCH BAR — tapping navigates to SearchScreen */}
+          <TouchableOpacity
+            style={[styles.searchBar]}
+            onPress={() => navigation.navigate("Search")}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color={COLORS.textSecondary}
             />
-          </View>
+            <Text style={styles.searchPlaceholderHeading}>
+              Search for services
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.notifButton]}
+            onPress={() => navigation.navigate("Notifications")}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={COLORS.textPrimary}
+            />
+            {unreadCount > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
-        {/* FAKE SEARCH BAR — tapping navigates to SearchScreen */}
-        <TouchableOpacity
-          style={[styles.searchBar, shadowStyle]}
-          onPress={() => navigation.navigate("Search")}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.searchPlaceholderHeading}>
-            Search any service
-          </Text>
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color={COLORS.textTertiary}
-          />
-        </TouchableOpacity>
+        <View style={styles.greetingContainer}>
+          <Text style={styles.greeting}>Good {getTimeOfDay()}, </Text>
+          <Text style={styles.greetingName}>{displayName}</Text>
+        </View>
 
         {/* CATEGORIES */}
         {/* <View style={styles.sectionHeader}>
@@ -187,6 +154,8 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesScroll}
+            onLayout={(e) => handleCategoriesLayout(e.nativeEvent.layout.width)}
+            onContentSizeChange={(w) => handleCategoriesContentSizeChange(w)}
           >
             {/* All chip */}
             <TouchableOpacity
@@ -194,19 +163,16 @@ export default function HomeScreen() {
                 styles.allChip,
                 !selectedCategoryId && styles.allChipActive,
               ]}
-              onPress={() => setSelectedCategoryId(null)}
+              onPress={handleSelectAll}
               onLayout={(event) => {
                 const { x, width } = event.nativeEvent.layout;
-                categoryLayoutsRef.current.all = { x, width };
+                handleCategoryLayout("all", x, width);
               }}
             >
-              <Ionicons
-                name="grid-outline"
-                size={16}
-                color={
-                  !selectedCategoryId ? COLORS.primary : COLORS.textSecondary
-                }
-              />
+              {!selectedCategoryId && (
+                <Ionicons name="grid-outline" size={14} color={COLORS.white} />
+              )}
+
               <Text
                 style={[
                   styles.allChipLabel,
@@ -224,7 +190,9 @@ export default function HomeScreen() {
                     width={90}
                     height={32}
                     borderRadius={SPACING.borderRadius.full}
-                    style={{ marginRight: SPACING.sm }}
+                    style={{
+                      marginRight: SPACING.sm,
+                    }}
                   />
                 ))
               : homeData?.categories.map((cat: Category) => (
@@ -234,13 +202,9 @@ export default function HomeScreen() {
                     isSelected={selectedCategoryId === cat.id}
                     onLayout={(event) => {
                       const { x, width } = event.nativeEvent.layout;
-                      categoryLayoutsRef.current[cat.id] = { x, width };
+                      handleCategoryLayout(cat.id, x, width);
                     }}
-                    onPress={() =>
-                      setSelectedCategoryId(
-                        selectedCategoryId === cat.id ? null : cat.id,
-                      )
-                    }
+                    onPress={() => handleCategoryPress(cat.id)}
                   />
                 ))}
           </ScrollView>
@@ -251,7 +215,7 @@ export default function HomeScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Featured</Text>
                 <TouchableOpacity onPress={() => navigation.navigate("Search")}>
-                  <Text style={styles.seeAll}>See all</Text>
+                  <Text style={styles.resultCount}>See all</Text>
                 </TouchableOpacity>
               </View>
 
@@ -259,6 +223,11 @@ export default function HomeScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.featuredScroll}
+                snapToInterval={
+                  Dimensions.get("window").width * 0.8 + SPACING.md
+                }
+                snapToAlignment="start"
+                decelerationRate="fast"
               >
                 {isHomeLoading
                   ? [1, 2].map((i) => (
@@ -358,209 +327,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-const makeStyles = (COLORS: AppColors, _isDark: boolean) =>
-  StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: COLORS.background,
-    },
-    listContent: {
-      padding: SPACING.screenPadding,
-      paddingTop: 0,
-      flexGrow: 1,
-    },
-
-    // ── Header ──────────────────────────────────────────────────────────────────
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingTop: SPACING.md,
-      marginBottom: SPACING.lg,
-    },
-
-    headerLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: SPACING.sm,
-    },
-
-    greeting: {
-      fontSize: TYPOGRAPHY.fontSize.md,
-      fontFamily: TYPOGRAPHY.fontFamily.regular,
-      color: COLORS.textSecondary,
-    },
-    greetingName: {
-      fontSize: TYPOGRAPHY.fontSize.xxxl,
-      fontFamily: TYPOGRAPHY.fontFamily.extraBold,
-      color: COLORS.textPrimary,
-    },
-    headerRight: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: SPACING.sm,
-    },
-    notifButton: {
-      width: 45,
-      height: 45,
-      borderRadius: SPACING.borderRadius.full,
-      backgroundColor: COLORS.surface,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    notifDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: COLORS.danger,
-      position: "absolute",
-      top: 8,
-      right: 10,
-      borderWidth: 1.5,
-      borderColor: COLORS.surface,
-    },
-
-    // ── Search bar ───────────────────────────────────────────────────────────────
-    searchBar: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: SPACING.md,
-      backgroundColor: COLORS.surface,
-      borderRadius: SPACING.borderRadius.full,
-      borderWidth: 1,
-      borderColor: COLORS.divider,
-      paddingHorizontal: SPACING.md,
-      paddingVertical: SPACING.md,
-      marginBottom: SPACING.lg,
-    },
-
-    searchPlaceholderHeading: {
-      fontSize: TYPOGRAPHY.fontSize.md,
-      color: COLORS.textSecondary,
-      fontFamily: TYPOGRAPHY.fontFamily.medium,
-    },
-    searchPlaceholder: {
-      fontSize: TYPOGRAPHY.fontSize.xs,
-      fontFamily: TYPOGRAPHY.fontFamily.regular,
-      color: COLORS.textTertiary,
-    },
-
-    // ── Categories ───────────────────────────────────────────────────────────────
-    categoriesScroll: {
-      marginBottom: SPACING.md,
-      gap: SPACING.sm,
-    },
-    allChip: {
-      paddingHorizontal: SPACING.md,
-      paddingVertical: SPACING.sm,
-      gap: SPACING.xs,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      borderRadius: SPACING.borderRadius.full,
-      backgroundColor: COLORS.surface,
-      flexDirection: "row",
-      alignItems: "center",
-      marginRight: SPACING.sm,
-    },
-    allChipActive: {
-      backgroundColor: COLORS.primaryLight,
-      borderColor: COLORS.primary,
-    },
-    allChipLabel: {
-      fontSize: TYPOGRAPHY.fontSize.sm,
-      fontFamily: TYPOGRAPHY.fontFamily.medium,
-      color: COLORS.textSecondary,
-    },
-    allChipLabelActive: {
-      color: COLORS.primary,
-    },
-
-    // ── Home content wrapper ─────────────────────────────────────────────────────
-    homeContent: {
-      flex: 1,
-      paddingTop: SPACING.xs,
-      gap: SPACING.sm,
-    },
-
-    // ── Section headers ──────────────────────────────────────────────────────────
-    sectionHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    sectionTitle: {
-      fontSize: TYPOGRAPHY.fontSize.lg,
-      fontFamily: TYPOGRAPHY.fontFamily.bold,
-      color: COLORS.textPrimary,
-    },
-    seeAll: {
-      fontSize: TYPOGRAPHY.fontSize.sm,
-      color: COLORS.primary,
-      fontFamily: TYPOGRAPHY.fontFamily.medium,
-    },
-    resultCount: {
-      fontSize: TYPOGRAPHY.fontSize.sm,
-      color: COLORS.textSecondary,
-      fontFamily: TYPOGRAPHY.fontFamily.regular,
-    },
-    featuredScroll: {
-      paddingBottom: SPACING.lg,
-    },
-
-    // ── Error state ──────────────────────────────────────────────────────────────
-    errorContainer: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      padding: SPACING.xl,
-      gap: SPACING.md,
-    },
-    errorTitle: {
-      fontSize: TYPOGRAPHY.fontSize.lg,
-      fontFamily: TYPOGRAPHY.fontFamily.medium,
-      color: COLORS.textPrimary,
-      textAlign: "center",
-    },
-    errorSubtitle: {
-      fontSize: TYPOGRAPHY.fontSize.sm,
-      color: COLORS.textSecondary,
-      textAlign: "center",
-    },
-
-    // ── Empty state ──────────────────────────────────────────────────────────────
-    emptyState: {
-      alignItems: "center",
-      paddingTop: SPACING.xxl,
-      gap: SPACING.sm,
-    },
-    emptyTitle: {
-      fontSize: TYPOGRAPHY.fontSize.lg,
-      fontFamily: TYPOGRAPHY.fontFamily.medium,
-      color: COLORS.textPrimary,
-    },
-    emptySubtitle: {
-      fontSize: TYPOGRAPHY.fontSize.sm,
-      color: COLORS.textSecondary,
-      textAlign: "center",
-    },
-
-    notifBadge: {
-      position: "absolute",
-      top: 2,
-      right: 2,
-      minWidth: 16,
-      height: 16,
-      borderRadius: 8,
-      backgroundColor: COLORS.danger,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 4,
-    },
-    notifBadgeText: {
-      color: COLORS.white,
-      fontSize: 10,
-      fontWeight: "600",
-    },
-  });

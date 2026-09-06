@@ -1,21 +1,13 @@
-﻿// =============================================================================
-// FILE 4: src/components/service/CategoryChip.tsx
-// =============================================================================
-//
-// A tappable pill for filtering by category.
-// Shown in a horizontal ScrollView above the service list.
-
-import React from "react";
+﻿import React from "react";
 import {
   TouchableOpacity,
   Text,
   StyleSheet,
-  View,
   LayoutChangeEvent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { Category } from "../../types/service.types";
-import { SPACING } from "../../constants/spacing";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { useAppTheme } from "@/context/ThemeContext";
 import { AppColors } from "@/constants/theme";
@@ -33,52 +25,66 @@ export const CategoryChip: React.FC<CategoryChipProps> = ({
   onPress,
   onLayout,
 }) => {
-  const { colors: COLORS, isDark } = useAppTheme();
-  const chipStyles = makeStyles(COLORS, isDark);
+  const { colors: COLORS } = useAppTheme();
+  const styles = makeStyles(COLORS);
 
   return (
     <TouchableOpacity
       style={[
-        chipStyles.container,
-        isSelected && chipStyles.selectedContainer,
-        // When selected, use the category's own color as background
-        isSelected && { borderColor: category.color },
+        styles.container,
+        isSelected && {
+          backgroundColor: category.color,
+          borderColor: category.color,
+        },
       ]}
       onPress={onPress}
       onLayout={onLayout}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
     >
-      <Ionicons
-        name={category.icon as any}
-        size={16}
-        color={isSelected ? category.color : COLORS.textSecondary}
-      />
-      <Text style={[chipStyles.label, isSelected && { color: category.color }]}>
+      {isSelected && (
+        <Ionicons name={category.icon as any} size={15} color={COLORS.white} />
+      )}
+
+      <Text
+        style={[styles.label, isSelected && styles.selectedLabel]}
+        numberOfLines={1}
+      >
         {category.name}
       </Text>
     </TouchableOpacity>
   );
 };
 
-const makeStyles = (COLORS: AppColors, _isDark: boolean) =>
+const makeStyles = (COLORS: AppColors) =>
   StyleSheet.create({
     container: {
-      flexDirection: 'row',
+      height: 38,
+      paddingHorizontal: 15,
+
+      borderRadius: 19,
+
+      flexDirection: "row",
       alignItems: "center",
-      gap: SPACING.xs,
-      paddingHorizontal: SPACING.md,
-      paddingVertical: SPACING.sm,
-      borderRadius: SPACING.borderRadius.full,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      justifyContent: "center",
+
+      gap: 7,
+
       backgroundColor: COLORS.surface,
+
+      borderWidth: 1,
+      borderColor: COLORS.divider,
+
+      marginRight: 8,
     },
-    selectedContainer: {
-      backgroundColor: COLORS.primaryLight,
-    },
+
     label: {
       fontSize: TYPOGRAPHY.fontSize.sm,
       fontFamily: TYPOGRAPHY.fontFamily.medium,
       color: COLORS.textSecondary,
+    },
+
+    selectedLabel: {
+      color: COLORS.white,
+      fontFamily: TYPOGRAPHY.fontFamily.bold,
     },
   });
