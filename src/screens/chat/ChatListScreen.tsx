@@ -1,25 +1,19 @@
 ﻿// src/screens/chat/ChatListScreen.tsx
-
-import React from 'react';
-import {
-  View, Text, FlatList, StyleSheet, RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { useConversations } from '@/hooks/useChat';
-import { ConversationItem } from '@/components/chat/ConversationItem';
-import { Skeleton } from '@/components/common/Skeleton';
-import { Conversation } from '@/types/chat.types';
-import { useAppTheme } from '@/context/ThemeContext';
-import { AppColors } from '@/constants/theme';
-import { SPACING } from '@/constants/spacing';
-import { TYPOGRAPHY } from '@/constants/typography';
-import { useState } from 'react';
+import { View, Text, FlatList, RefreshControl } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { useConversations } from "@/hooks/useChat";
+import { ConversationItem } from "@/components/chat/ConversationItem";
+import { Skeleton } from "@/components/common/Skeleton";
+import { Conversation } from "@/types/chat.types";
+import { useAppTheme } from "@/context/ThemeContext";
+import { useState } from "react";
+import { makeChatListStyles } from "@/styles/chatList.styles";
 
 export default function ChatListScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
-  const styles = makeStyles(COLORS, isDark);
+  const styles = makeChatListStyles(COLORS, isDark);
   const navigation = useNavigation<any>();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -32,8 +26,7 @@ export default function ChatListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
@@ -65,7 +58,7 @@ export default function ChatListScreen() {
             <ConversationItem
               conversation={item as Conversation}
               onPress={() =>
-                navigation.navigate('ChatRoom', {
+                navigation.navigate("ChatRoom", {
                   conversationId: (item as Conversation).id,
                   recipientName: (item as Conversation).participantName,
                 })
@@ -76,7 +69,11 @@ export default function ChatListScreen() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.emptyState}>
-              <Ionicons name="chatbubbles-outline" size={48} color={COLORS.textTertiary} />
+              <Ionicons
+                name="chatbubbles-outline"
+                size={48}
+                color={COLORS.textTertiary}
+              />
               <Text style={styles.emptyTitle}>No messages yet</Text>
               <Text style={styles.emptySubtitle}>
                 Your conversations with providers will appear here
@@ -97,62 +94,3 @@ export default function ChatListScreen() {
     </SafeAreaView>
   );
 }
-
-const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    padding: SPACING.screenPadding,
-    paddingBottom: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.fontSize.xxl,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-  },
-  headerBadge: {
-    backgroundColor: COLORS.danger,
-    borderRadius: SPACING.borderRadius.full,
-    minWidth: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: SPACING.xs,
-  },
-  headerBadgeText: {
-    color: COLORS.white,
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    padding: SPACING.screenPadding,
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  skeletonInfo: { flex: 1, gap: SPACING.xs },
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: SPACING.xxxl,
-    gap: SPACING.md,
-    padding: SPACING.screenPadding,
-  },
-  emptyTitle: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-  },
-  emptySubtitle: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-});
