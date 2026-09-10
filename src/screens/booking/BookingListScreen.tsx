@@ -77,18 +77,13 @@ export default function BookingListScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* HEADER */}
       <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Bookings</Text>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.addButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons
-            name="chevron-back-outline"
-            size={20}
-            color={COLORS.textSecondary}
-          />
+          <Ionicons name="add" size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Bookings</Text>
-        <View />
       </View>
 
       {/* FILTER TABS */}
@@ -118,7 +113,7 @@ export default function BookingListScreen() {
           );
         }}
       />
-      
+
       {/* LIST */}
       <FlatList
         data={isLoading ? ([1, 2, 3] as any[]) : filtered}

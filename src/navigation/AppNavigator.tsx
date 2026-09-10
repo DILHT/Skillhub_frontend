@@ -176,12 +176,12 @@ export default function AppNavigator() {
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? (tab?.iconFocused ?? 'home') : (tab?.icon ?? 'home-outline')}
-              size={21}
+              size={20}
               color={color}
             />
           ),
           tabBarActiveTintColor: COLORS.primary,
-          tabBarInactiveTintColor: COLORS.textTertiary,
+          tabBarInactiveTintColor: COLORS.textPrimary,
           tabBarStyle: {
             backgroundColor: COLORS.tabBar,
             borderTopColor: COLORS.tabBarBorder,
@@ -191,8 +191,8 @@ export default function AppNavigator() {
             paddingTop: 4,
           },
           tabBarLabelStyle: {
-            fontSize: TYPOGRAPHY.fontSize.xs,
-            fontFamily: TYPOGRAPHY.fontFamily.medium,
+            fontSize: TYPOGRAPHY.fontSize.sm,
+            fontFamily: TYPOGRAPHY.fontFamily.bold,
           },
           tabBarLabel: tab?.label ?? route.name,
         };

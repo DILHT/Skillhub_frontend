@@ -11,12 +11,14 @@ export const makeBookingListStyles = (COLORS: AppColors, _isDark: boolean) =>
     header: {
       flexDirection: "row",
       alignItems: "center",
-      paddingHorizontal: SPACING.screenPadding,
-      paddingTop: SPACING.sm,
+      justifyContent: "space-between",
+      gap: SPACING.sm,
+      padding: SPACING.screenPadding,
       paddingBottom: SPACING.md,
     },
 
-    backButton: {
+
+    addButton: {
       width: 42,
       height: 42,
       borderRadius: 21,
@@ -26,10 +28,8 @@ export const makeBookingListStyles = (COLORS: AppColors, _isDark: boolean) =>
     },
 
     headerTitle: {
-      flex: 1,
-      textAlign: "center",
-      fontSize: TYPOGRAPHY.fontSize.xl,
-      fontFamily: TYPOGRAPHY.fontFamily.bold,
+      fontSize: TYPOGRAPHY.fontSize.xxxl,
+      fontFamily: TYPOGRAPHY.fontFamily.extraBold,
       color: COLORS.textPrimary,
     },
 
@@ -43,13 +43,13 @@ export const makeBookingListStyles = (COLORS: AppColors, _isDark: boolean) =>
 
     tabsList: {
       flexGrow: 0,
-      marginBottom: SPACING.lg,
+      marginBottom: SPACING.md,
     },
 
     tabsRow: {
       paddingHorizontal: SPACING.screenPadding,
       gap: SPACING.sm,
-      paddingVertical: SPACING.xs,
+      paddingVertical: SPACING.sm,
     },
 
     tab: {
