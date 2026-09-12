@@ -28,7 +28,7 @@ export const lightColors = {
   warningText: '#92400E',
 
   // Surfaces — pure white and light grey, zero blue tint
-  background: '#F8FAFC',
+  background: '#f1f5f9',
   surface: '#FFFFFF',
   surfaceSecondary: '#F1F5F9',
   shadow: '#F8FAFC',
