@@ -1,13 +1,12 @@
 ﻿// src/screens/home/SearchScreen.tsx
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   TextInput,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,9 +18,7 @@ import { ServiceCard } from "@/components/service/ServiceCard";
 import { ServiceCardSkeleton } from "@/components/common/Skeleton";
 import { Service } from "@/types/service.types";
 import { useAppTheme } from "@/context/ThemeContext";
-import { AppColors } from "@/constants/theme";
 import { SPACING } from "@/constants/spacing";
-import { TYPOGRAPHY } from "@/constants/typography";
 import { makeSearchStyles } from "@/styles/search.styles";
 import useShadows from "@/constants/shadows";
 
@@ -96,7 +93,11 @@ export default function SearchScreen() {
           style={[styles.backBtn]}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Ionicons name="arrow-back" size={22} color={COLORS.textSecondary} />
+          <Ionicons
+            name="chevron-back"
+            size={22}
+            color={COLORS.textSecondary}
+          />
         </TouchableOpacity>
 
         <View style={[styles.inputWrapper]}>
