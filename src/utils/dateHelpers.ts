@@ -1,12 +1,27 @@
 // src/utils/dateHelpers.ts
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid } from "date-fns";
 
 // Safely formats a date string. Returns a fallback instead of crashing
 // when the string is empty or malformed (e.g. backend returned no date).
 export function safeFormatDate(
   dateStr: string | undefined | null,
-  formatStr: string = 'EEEE, d MMMM yyyy',
-  fallback: string = 'Date not set'
+  formatStr: string = "EEEE, d MMMM yyyy",
+  fallback: string = "Date not set",
+): string {
+  if (!dateStr) return fallback;
+  try {
+    const parsed = parseISO(dateStr);
+    if (!isValid(parsed)) return fallback;
+    return format(parsed, formatStr);
+  } catch {
+    return fallback;
+  }
+}
+
+export function safeFormatTime(
+  dateStr: string | undefined | null,
+  formatStr: string = "h:mm a",
+  fallback: string = "",
 ): string {
   if (!dateStr) return fallback;
   try {
