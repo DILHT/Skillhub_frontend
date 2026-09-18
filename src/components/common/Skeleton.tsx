@@ -97,6 +97,21 @@ export const ServiceCardSkeleton: React.FC = () => {
   );
 };
 
+export const HorizontalServiceCardSkeleton: React.FC = () => {
+  const { colors: COLORS, isDark } = useAppTheme();
+  const skeletonStyles = makeStyles(COLORS, isDark);
+
+  return (
+    <View style={skeletonStyles.card}>
+      <Skeleton height={160} borderRadius={SPACING.borderRadius.md} />
+      <View style={skeletonStyles.cardBody}>
+          <Skeleton width="80%" height={14} />
+          <Skeleton width="45%" height={14} />
+      </View>
+    </View>
+  );
+};
+
 const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   base: {
     backgroundColor: COLORS.border,
@@ -106,9 +121,10 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
     borderRadius: SPACING.borderRadius.lg,
     overflow: 'hidden',
     marginBottom: SPACING.md,
+    padding: SPACING.sm,
   },
   cardBody: {
-    padding: SPACING.md,
+    paddingVertical: SPACING.md,
     gap: SPACING.sm,
   },
   row: {
