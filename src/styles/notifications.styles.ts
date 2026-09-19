@@ -8,7 +8,9 @@ import { TYPOGRAPHY } from "@/constants/typography";
 
 export const makeNotificationsStyles = (COLORS: AppColors) =>
   StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: COLORS.background },
+    // Extends the header surface through the status-bar safe area.
+    safeArea: { flex: 1, backgroundColor: COLORS.surface },
+    content: { flex: 1, backgroundColor: COLORS.background },
     header: {
       flexDirection: "row",
       alignItems: "center",
@@ -17,6 +19,9 @@ export const makeNotificationsStyles = (COLORS: AppColors) =>
       paddingHorizontal: SPACING.screenPadding,
       paddingTop: SPACING.sm,
       paddingBottom: SPACING.md,
+      backgroundColor: COLORS.surface,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.divider,
     },
     headerLeft: {
       flexDirection: "row",
@@ -30,8 +35,6 @@ export const makeNotificationsStyles = (COLORS: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: COLORS.surface,
-      borderWidth: 1,
-      borderColor: COLORS.divider,
     },
 
     headerTitle: {
@@ -41,9 +44,17 @@ export const makeNotificationsStyles = (COLORS: AppColors) =>
     },
 
     markAll: {
-      fontSize: 14,
+      fontSize: TYPOGRAPHY.fontSize.sm,
       color: COLORS.primary,
       fontFamily: TYPOGRAPHY.fontFamily.medium,
+    },
+    markAllButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+      minHeight: 40,
+      paddingHorizontal: SPACING.xs,
+      borderRadius: SPACING.borderRadius.sm,
     },
     center: {
       flex: 1,
@@ -65,34 +76,34 @@ export const makeNotificationsStyles = (COLORS: AppColors) =>
     },
     retryText: { color: COLORS.white, fontSize: 15, fontWeight: "600" },
     notificationsStyles: {
-      paddingVertical: SPACING.sm,
+      paddingTop: SPACING.md,
+      paddingBottom: SPACING.xl,
       paddingHorizontal: SPACING.screenPadding,
-      gap: SPACING.md,
+      gap: SPACING.sm,
     },
     sectionHeader: {
       fontSize: TYPOGRAPHY.fontSize.sm,
       fontFamily: TYPOGRAPHY.fontFamily.medium,
       color: COLORS.textSecondary,
       letterSpacing: 0.5,
+      marginTop: SPACING.sm,
+      marginBottom: SPACING.xs,
     },
     item: {
       flexDirection: "row",
       alignItems: "flex-start",
-      gap: 12,
-      paddingHorizontal: 20,
-      paddingVertical: 14,
+      gap: SPACING.md,
+      minHeight: 84,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.md,
       backgroundColor: COLORS.surface,
       borderRadius: SPACING.borderRadius.lg,
-
-      // Remove the strong border if you're using shadows
-      borderWidth: 0,
+      borderWidth: 1,
+      borderColor: COLORS.border,
     },
 
     itemUnread: {
-      // Keep the card white
-      backgroundColor: COLORS.surface,
-
-      // Subtle unread indicator
+      backgroundColor: COLORS.primaryLight,
       borderLeftWidth: 3,
       borderLeftColor: COLORS.primary,
     },
@@ -101,13 +112,13 @@ export const makeNotificationsStyles = (COLORS: AppColors) =>
       width: 40,
       height: 40,
       borderRadius: SPACING.borderRadius.full,
-      backgroundColor: COLORS.background,
+      backgroundColor: COLORS.surfaceSecondary,
       alignItems: "center",
       justifyContent: "center",
     },
 
     unreadIcon: {
-      backgroundColor: COLORS.primaryLight,
+      backgroundColor: COLORS.surface,
     },
 
     itemContent: {
@@ -130,6 +141,9 @@ export const makeNotificationsStyles = (COLORS: AppColors) =>
       color: COLORS.textPrimary,
       fontFamily: TYPOGRAPHY.fontFamily.medium,
     },
+    itemTitleUnread: {
+      fontFamily: TYPOGRAPHY.fontFamily.bold,
+    },
 
     itemBody: {
       fontSize: TYPOGRAPHY.fontSize.sm,
@@ -150,6 +164,6 @@ export const makeNotificationsStyles = (COLORS: AppColors) =>
       height: 7,
       borderRadius: 4,
       backgroundColor: COLORS.primary,
-      marginTop: 6,
+      marginTop: SPACING.xs,
     },
   });
