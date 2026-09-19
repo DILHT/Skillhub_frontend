@@ -88,6 +88,7 @@ export default function NotificationsScreen() {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.backButton}
           >
             <Ionicons
               name="chevron-back"

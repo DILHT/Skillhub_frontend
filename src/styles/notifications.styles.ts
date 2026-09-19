@@ -23,22 +23,23 @@ export const makeNotificationsStyles = (COLORS: AppColors) =>
       alignItems: "center",
       gap: SPACING.md,
     },
-    backBtn: {
-      width: 40,
-      height: 40,
+    backButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: SPACING.borderRadius.full,
       backgroundColor: COLORS.surface,
       borderWidth: 1,
       borderColor: COLORS.divider,
     },
 
     headerTitle: {
-      fontSize: TYPOGRAPHY.fontSize.xxl,
+      fontSize: TYPOGRAPHY.fontSize.xl,
       fontFamily: TYPOGRAPHY.fontFamily.extraBold,
       color: COLORS.textPrimary,
     },
+
     markAll: {
       fontSize: 14,
       color: COLORS.primary,

@@ -43,7 +43,7 @@ export const makeBookingListStyles = (COLORS: AppColors, _isDark: boolean) =>
 
     tabsList: {
       flexGrow: 0,
-      marginBottom: SPACING.md,
+      marginBottom: SPACING.md, 
     },
 
     tabsRow: {
@@ -53,10 +53,22 @@ export const makeBookingListStyles = (COLORS: AppColors, _isDark: boolean) =>
     },
 
     tab: {
-      paddingHorizontal: SPACING.lg,
-      paddingVertical: SPACING.sm,
-      borderRadius: SPACING.borderRadius.full,
+      height: 38,
+
+      paddingHorizontal: 15,
+
+      borderRadius: 19,
+
       backgroundColor: COLORS.surface,
+
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+
+      gap: 7,
+
+      marginRight: 8,
+
       borderWidth: 1,
       borderColor: COLORS.divider,
     },
