@@ -123,12 +123,10 @@ export default function BookingDetailScreen() {
           <Text style={styles.headerTitle}>Booking details</Text>
           <View style={{ width: 30 }} />
         </View>
-        <View
-          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-        >
-          <Text style={{ color: COLORS.textSecondary }}>
-            Loading booking...
-          </Text>
+        <View style={styles.body}>
+          <View style={styles.loadingState}>
+            <Text style={{ color: COLORS.textSecondary }}>Loading booking...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -149,16 +147,17 @@ export default function BookingDetailScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={styles.backButton}
         >
-          <Ionicons name="chevron-back" size={20} color={COLORS.textPrimary} />
+          <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Booking details</Text>
         <View style={{ width: 30 }} />
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+      <View style={styles.body}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+        >
         {/* Status + reference */}
         <View style={styles.statusRow}>
           <StatusBadge status={booking.status} />
@@ -263,30 +262,32 @@ export default function BookingDetailScreen() {
             style={{ borderRadius: SPACING.borderRadius.full, marginTop: 20 }}
           />
         )}
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const makeStyles = (COLORS: AppColors, _isDark: boolean) =>
   StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: COLORS.background },
+    // Keeps the header colour continuous through the status-bar safe area.
+    safeArea: { flex: 1, backgroundColor: COLORS.surface },
+    body: { flex: 1, backgroundColor: COLORS.background },
     header: {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: SPACING.screenPadding,
       paddingVertical: SPACING.md,
+      backgroundColor: COLORS.surface,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.divider,
     },
 
     backButton: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
+      borderRadius: SPACING.borderRadius.full,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: COLORS.surface,
-      borderWidth: 1,
-      borderColor: COLORS.divider,
     },
 
     headerTitle: {
@@ -297,16 +298,17 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) =>
       color: COLORS.textPrimary,
     },
     content: {
+      paddingTop: SPACING.md,
       paddingHorizontal: SPACING.screenPadding,
       paddingBottom: SPACING.xxl,
-      gap: SPACING.sm,
+      gap: SPACING.md,
     },
     statusRow: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       paddingVertical: SPACING.xs,
-      marginBottom: SPACING.xs,
+      marginBottom: 0,
     },
     refText: {
       fontSize: TYPOGRAPHY.fontSize.xs,
@@ -317,10 +319,10 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) =>
     card: {
       backgroundColor: COLORS.surface,
       borderRadius: SPACING.borderRadius.lg,
-      padding: SPACING.lg,
+      padding: SPACING.md,
       borderWidth: 1,
-      borderColor: COLORS.divider,
-      marginBottom: SPACING.sm,
+      borderColor: COLORS.border,
+      marginBottom: 0,
     },
     cardTitle: {
       fontSize: TYPOGRAPHY.fontSize.xs,
@@ -365,12 +367,17 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) =>
     paymentAmount: {
       fontSize: TYPOGRAPHY.fontSize.lg,
       fontFamily: TYPOGRAPHY.fontFamily.bold,
-      color: COLORS.textPrimary,
+      color: COLORS.primary,
     },
     notesText: {
       fontSize: TYPOGRAPHY.fontSize.sm,
       fontFamily: TYPOGRAPHY.fontFamily.regular,
       color: COLORS.textSecondary,
       lineHeight: 20,
+    },
+    loadingState: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
     },
   });

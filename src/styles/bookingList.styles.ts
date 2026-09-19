@@ -17,7 +17,6 @@ export const makeBookingListStyles = (COLORS: AppColors, _isDark: boolean) =>
       paddingBottom: SPACING.md,
     },
 
-
     addButton: {
       width: 42,
       height: 42,
@@ -43,7 +42,7 @@ export const makeBookingListStyles = (COLORS: AppColors, _isDark: boolean) =>
 
     tabsList: {
       flexGrow: 0,
-      marginBottom: SPACING.md, 
+      marginBottom: SPACING.md,
     },
 
     tabsRow: {
@@ -55,7 +54,7 @@ export const makeBookingListStyles = (COLORS: AppColors, _isDark: boolean) =>
     tab: {
       height: 38,
 
-      paddingHorizontal: 15,
+      paddingHorizontal: SPACING.md,
 
       borderRadius: 19,
 
