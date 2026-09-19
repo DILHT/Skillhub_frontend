@@ -1,234 +1,287 @@
 ﻿// src/screens/chat/ChatRoomScreen.tsx
 
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  View, Text, FlatList, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
-  Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { useChatRoom } from '@/hooks/useChat';
-import { useAuthStore } from '@/store/authStore';
-import { useChatStore } from '@/store/chatStore';
-import { MessageBubble } from '@/components/chat/MessageBubble';
-import { ChatInput } from '@/components/chat/ChatInput';
-import { Avatar } from '@/components/common/Avatar';
-import { ChatStackParamList } from '@/navigation/AppNavigator';
-import { Message } from '@/types/chat.types';
-import { useAppTheme } from '@/context/ThemeContext';
-import { AppColors } from '@/constants/theme';
-import { SPACING } from '@/constants/spacing';
-import { TYPOGRAPHY } from '@/constants/typography';
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Pressable,
+  KeyboardAvoidingView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Platform,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { useChatRoom } from "@/hooks/useChat";
+import { useAuthStore } from "@/store/authStore";
+import { useChatStore } from "@/store/chatStore";
+import { MessageBubble } from "@/components/chat/MessageBubble";
+import { ChatInput } from "@/components/chat/ChatInput";
+import { Avatar } from "@/components/common/Avatar";
+import { ChatStackParamList } from "@/navigation/AppNavigator";
+import { Message } from "@/types/chat.types";
+import { useAppTheme } from "@/context/ThemeContext";
+import { makeChatRoomStyles } from "@/styles/chatRoom.styles";
+import { useShadows } from "@/constants/shadows";
 
-type RouteProps = RouteProp<ChatStackParamList, 'ChatRoom'>;
+type RouteProps = RouteProp<ChatStackParamList, "ChatRoom">;
+
+type ListRow =
+  | { type: "date"; id: string; label: string }
+  | { type: "message"; id: string; message: Message };
 
 export default function ChatRoomScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
-  const styles = makeStyles(COLORS, isDark);
+  const insets = useSafeAreaInsets();
+  const styles = makeChatRoomStyles(COLORS, isDark, insets);
+  const shadows = useShadows(isDark);
+  const shadowStyle = isDark ? shadows.tinted.sm : shadows.sm;
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProps>();
   const { conversationId, recipientName } = route.params;
 
-  const userId = useAuthStore((s) => s.user?.id ?? '');
+  const userId = useAuthStore((s) => s.user?.id ?? "");
   const conversations = useChatStore((s) => s.conversations);
   const conversation = conversations.find((c) => c.id === conversationId);
   const isOnline = conversation?.isOnline ?? false;
 
   const { messages, sendMessage, handleTyping, isOtherTyping } = useChatRoom(
     conversationId,
-    conversation?.participantId ?? ''
+    conversation?.participantId ?? "",
   );
 
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<ListRow>>(null);
+  const isNearBottomRef = useRef(true);
+  const [showScrollToLatest, setShowScrollToLatest] = useState(false);
+  const [isOptionsMenuVisible, setIsOptionsMenuVisible] = useState(false);
 
-  // Scroll to bottom whenever a new message arrives
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 50);
+  // Flatten messages + date separators once per `messages` change instead of
+  // recomputing "did the day change" inside renderItem on every row render.
+  const rows = useMemo<ListRow[]>(() => {
+    const result: ListRow[] = [];
+    let lastDay: string | null = null;
+
+    for (const message of messages) {
+      const day = message.createdAt.slice(0, 10);
+      if (day !== lastDay) {
+        result.push({
+          type: "date",
+          id: `date-${day}`,
+          label: new Date(message.createdAt).toLocaleDateString("en-MW", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          }),
+        });
+        lastDay = day;
+      }
+      result.push({ type: "message", id: message.id, message });
     }
-  }, [messages.length]);
 
-  // Group messages by date to show date separators
-  const renderItem = ({ item, index }: { item: Message; index: number }) => {
-    const isMine = item.senderId === userId;
+    return result;
+  }, [messages]);
 
-    // Show date separator when the day changes
-    const prevMessage = messages[index - 1];
-    const showDateSeparator =
-      !prevMessage ||
-      item.createdAt.slice(0, 10) !== prevMessage.createdAt.slice(0, 10);
+  const handleOptionsPress = useCallback(() => {
+    setIsOptionsMenuVisible((visible) => !visible);
+  }, []);
 
-    return (
-      <>
-        {showDateSeparator && (
+  const renderItem = useCallback(
+    ({ item }: { item: ListRow }) => {
+      if (item.type === "date") {
+        return (
           <View style={styles.dateSeparator}>
-            <Text style={styles.dateSeparatorText}>
-              {new Date(item.createdAt).toLocaleDateString('en-MW', {
-                weekday: 'long', month: 'long', day: 'numeric',
-              })}
-            </Text>
+            <Text style={styles.dateSeparatorText}>{item.label}</Text>
           </View>
-        )}
-        <MessageBubble message={item} isMine={isMine} />
-      </>
-    );
-  };
+        );
+      }
+      return (
+        <MessageBubble
+          message={item.message}
+          isMine={item.message.senderId === userId}
+        />
+      );
+    },
+    [styles, userId],
+  );
+
+  const scrollToLatest = useCallback(() => {
+    flatListRef.current?.scrollToEnd({ animated: true });
+    setShowScrollToLatest(false);
+  }, []);
+
+  const handleScroll = useCallback(
+    ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const distanceFromBottom =
+        nativeEvent.contentSize.height -
+        nativeEvent.layoutMeasurement.height -
+        nativeEvent.contentOffset.y;
+      const isNearBottom = distanceFromBottom < 72;
+
+      isNearBottomRef.current = isNearBottom;
+      setShowScrollToLatest(!isNearBottom);
+    },
+    [],
+  );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.screenContent}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          {/* HEADER */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backBtn}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="chevron-back"
+                size={26}
+                color={COLORS.textPrimary}
+              />
+            </TouchableOpacity>
 
-        {/* HEADER */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backBtn}
-          >
-            <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-          </TouchableOpacity>
+            <Avatar
+              uri={conversation?.participantAvatar ?? null}
+              name={recipientName}
+              size="sm"
+            />
 
-          <Avatar
-            uri={conversation?.participantAvatar ?? null}
-            name={recipientName}
-            size="sm"
-          />
-
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerName} numberOfLines={1}>{recipientName}</Text>
-            <Text style={styles.headerStatus}>
-              {isOnline ? '● Online' : 'Offline'}
-            </Text>
-          </View>
-
-          {/* Future: call button, info button */}
-          <TouchableOpacity style={styles.headerAction}
-          onPress={() => Alert.alert(
-              'Options',
-              '',
-              [
-                { text: 'View Profile', onPress: () => {} },
-                { text: 'Block User', style: 'destructive', onPress: () => {} },
-                { text: 'Cancel', style: 'cancel' },
-              ]
-            )}
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* MESSAGES */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.messageList}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyChat}>
-              <Ionicons name="chatbubble-outline" size={40} color={COLORS.textTertiary} />
-              <Text style={styles.emptyChatText}>
-                Send a message to start the conversation
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerName} numberOfLines={1}>
+                {recipientName}
+              </Text>
+              <Text style={styles.headerStatus}>
+                {isOnline ? "Online" : "Offline"}
               </Text>
             </View>
-          }
-          // Typing indicator below messages
-          ListFooterComponent={
-            isOtherTyping ? (
-              <View style={styles.typingIndicator}>
-                <Text style={styles.typingText}>{recipientName} is typing...</Text>
+
+            <TouchableOpacity
+              style={styles.headerAction}
+              onPress={handleOptionsPress}
+              accessibilityLabel="Conversation options"
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="ellipsis-vertical"
+                size={18}
+                color={COLORS.textPrimary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* MESSAGES */}
+          <FlatList
+            ref={flatListRef}
+            data={rows}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.messageList}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews={Platform.OS === "android"}
+            maxToRenderPerBatch={16}
+            windowSize={10}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            // Preserve the reader's place when they are viewing earlier messages.
+            // Only follow new content while they are already at the latest message.
+            onContentSizeChange={() => {
+              if (isNearBottomRef.current) {
+                flatListRef.current?.scrollToEnd({ animated: rows.length > 0 });
+              }
+            }}
+            ListEmptyComponent={
+              <View style={styles.emptyChat}>
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={40}
+                  color={COLORS.textTertiary}
+                />
+                <Text style={styles.emptyChatText}>
+                  Send a message to start the conversation
+                </Text>
               </View>
-            ) : null
-          }
-        />
+            }
+            ListFooterComponent={
+              isOtherTyping ? (
+                <View style={styles.typingIndicator}>
+                  <Text style={styles.typingText}>
+                    {recipientName} is typing...
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
 
-        {/* INPUT BAR */}
-        <ChatInput onSend={sendMessage} onTyping={handleTyping} />
+          {showScrollToLatest && rows.length > 0 && (
+            <TouchableOpacity
+              style={styles.scrollToLatest}
+              onPress={scrollToLatest}
+              accessibilityLabel="Jump to latest message"
+              accessibilityHint="Scrolls to the most recent message"
+              accessibilityRole="button"
+            >
+              <Ionicons name="arrow-down" size={18} color={COLORS.white} />
+            </TouchableOpacity>
+          )}
 
-      </KeyboardAvoidingView>
+          {isOptionsMenuVisible && (
+            <>
+              <Pressable
+                style={styles.optionsBackdrop}
+                onPress={() => setIsOptionsMenuVisible(false)}
+                accessibilityLabel="Close conversation options"
+                accessibilityRole="button"
+              />
+              <View style={[styles.optionsMenu, shadowStyle]} accessibilityViewIsModal>
+                <TouchableOpacity
+                  style={styles.optionsMenuItem}
+                  onPress={() => setIsOptionsMenuVisible(false)}
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={15}
+                    color={COLORS.textPrimary}
+                  />
+                  <Text style={styles.optionsMenuText}>View profile</Text>
+                </TouchableOpacity>
+                <View style={styles.optionsDivider} />
+                <TouchableOpacity
+                  style={styles.optionsMenuItem}
+                  onPress={() => setIsOptionsMenuVisible(false)}
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="ban-outline"
+                    size={15}
+                    color={COLORS.danger}
+                  />
+                  <Text style={styles.optionsMenuDanger}>Block user</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {/* INPUT BAR */}
+          <ChatInput
+            onSend={sendMessage}
+            onTyping={handleTyping}
+            bottomInset={insets.bottom}
+          />
+        </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
-
-const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
-  flex: { flex: 1 },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    padding: SPACING.screenPadding,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  backBtn: { padding: 2 },
-  headerInfo: { flex: 1 },
-  headerName: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-  },
-  headerStatus: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textSecondary,
-  },
-  headerAction: { padding: 4 },
-
-  // Messages
-  messageList: {
-    paddingVertical: SPACING.md,
-    flexGrow: 1,
-  },
-
-  // Date separator
-  dateSeparator: {
-    alignItems: 'center',
-    marginVertical: SPACING.md,
-  },
-  dateSeparatorText: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textTertiary,
-    backgroundColor: COLORS.divider,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 3,
-    borderRadius: SPACING.borderRadius.full,
-  },
-
-  // Typing indicator
-  typingIndicator: {
-    paddingHorizontal: SPACING.screenPadding,
-    paddingBottom: SPACING.sm,
-  },
-  typingText: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-  },
-
-  // Empty state
-  emptyChat: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: SPACING.xxxl,
-    gap: SPACING.md,
-    padding: SPACING.xl,
-  },
-  emptyChatText: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-});

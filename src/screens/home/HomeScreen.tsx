@@ -1,6 +1,6 @@
 ﻿// src/screens/home/HomeScreen.tsx
 
-import React, { useCallback } from "react";
+import  { useCallback } from "react";
 import {
   View,
   Text,
@@ -30,10 +30,7 @@ import { Category, Service } from "@/types/service.types";
 import { useAppTheme } from "@/context/ThemeContext";
 import { SPACING } from "@/constants/spacing";
 import { useNotifications } from "@/hooks/useNotifications";
-import { ur } from "zod/v4/locales";
-import { Avatar } from "@/components/common/Avatar";
 import { getTimeOfDay } from "@/helpers/home.helpers";
-import { useShadows } from "@/constants/shadows";
 import { makeHomeStyles } from "@/styles/home.styles";
 
 export default function HomeScreen() {
