@@ -21,7 +21,7 @@ const MOCK_BALANCE: WalletBalance = {
 
 const MOCK_TRANSACTIONS: Transaction[] = [
   { id: 't1', walletId: 'wallet-001', type: 'service_payment', status: 'completed', amount: 25000, fee: 0, netAmount: 25000, currency: 'MWK', balanceBefore: 70000, balanceAfter: 45000, description: 'Home deep cleaning — Grace Gondwe', createdAt: '2024-07-10T08:00:00Z' },
-  { id: 't2', walletId: 'wallet-001', type: 'deposit', status: 'completed', amount: 100000, fee: 0, netAmount: 100000, currency: 'MWK', balanceBefore: 0, balanceAfter: 100000, description: 'Airtel Money top-up', createdAt: '2024-07-08T10:00:00Z' },
+  { id: 't2', walletId: 'wallet-001', type: 'deposit', status: 'completed', amount: 100000, fee: 0, netAmount: 100000, currency: 'MWK', balanceBefore: 0, balanceAfter: 100000, description: 'Airtel Money top-up', createdAt: '2024-07-10T10:00:00Z' },
   { id: 't3', walletId: 'wallet-001', type: 'service_refund', status: 'completed', amount: 5000, fee: 0, netAmount: 5000, currency: 'MWK', balanceBefore: 65000, balanceAfter: 70000, description: 'Cancelled tutoring session', createdAt: '2024-07-05T14:00:00Z' },
   { id: 't4', walletId: 'wallet-001', type: 'service_payment', status: 'completed', amount: 15000, fee: 0, netAmount: 15000, currency: 'MWK', balanceBefore: 80000, balanceAfter: 65000, description: 'Plumbing repairs — Chisomo Phiri', createdAt: '2024-07-02T09:00:00Z' },
   { id: 't5', walletId: 'wallet-001', type: 'deposit', status: 'completed', amount: 50000, fee: 0, netAmount: 50000, currency: 'MWK', balanceBefore: 30000, balanceAfter: 80000, description: 'TNM Mpamba top-up', createdAt: '2024-06-28T11:00:00Z' },
