@@ -10,7 +10,7 @@ import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '../../constants/spacing';
 import { TYPOGRAPHY } from '../../constants/typography';
-import { format, parseISO } from 'date-fns';
+import { safeFormatDate } from '@/utils/dateHelpers';
 
 interface BookingCardProps {
   booking: Booking;
@@ -25,22 +25,25 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) =>
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
 
-  const formattedDate = format(parseISO(booking.scheduledDate), 'EEE, d MMM yyyy');
+  const formattedDate = safeFormatDate(booking.scheduledDate, 'EEE, d MMM yyyy', 'Date not set');
+
+  const providerName =
+    `${booking.provider?.firstName ?? ''} ${booking.provider?.lastName ?? ''}`.trim();
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       {/* Service image + title row */}
       <View style={styles.topRow}>
         <SmartImage
-          uri={booking.service.images?.[0]}
+          uri={booking.service?.images?.[0]}
           style={styles.image}
           fallbackIcon="briefcase-outline"
         />
         <View style={styles.info}>
-          <Text style={styles.title} numberOfLines={2}>{booking.service.title}</Text>
-          <Text style={styles.provider}>
-            {booking.provider.firstName} {booking.provider.lastName}
+          <Text style={styles.title} numberOfLines={2}>
+            {booking.service?.title || 'Service'}
           </Text>
+          <Text style={styles.provider}>{providerName || 'Provider'}</Text>
           <StatusBadge status={booking.status} />
         </View>
       </View>

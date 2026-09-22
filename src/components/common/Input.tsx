@@ -54,6 +54,8 @@ export const Input = forwardRef<any, InputProps>(({
     ? COLORS.primary
     : COLORS.border;
 
+  const containerBorderWidth = isFocused ? 2 : 1;
+
   return (
     <View style={inputStyles.wrapper}>
 
@@ -70,7 +72,7 @@ export const Input = forwardRef<any, InputProps>(({
       {/* INPUT CONTAINER */}
       <View style={[
         inputStyles.container,
-        { borderColor: containerBorderColor },
+        { borderColor: containerBorderColor, borderWidth: containerBorderWidth },
         isFocused && inputStyles.focused,
       ]}>
 
@@ -79,7 +81,7 @@ export const Input = forwardRef<any, InputProps>(({
           <Ionicons
             name={leftIcon}
             size={20}
-            color={isFocused ? COLORS.primary : COLORS.textSecondary}
+            color={isFocused ? COLORS.primary : COLORS.textTertiary}
             style={inputStyles.leftIcon}
           />
         )}
@@ -90,6 +92,8 @@ export const Input = forwardRef<any, InputProps>(({
           style={[inputStyles.input, style]}
           secureTextEntry={shouldHideText}
           placeholderTextColor={COLORS.textTertiary}
+          cursorColor={COLORS.primary}
+          selectionColor={COLORS.primary}
           onFocus={(e) => {
             setIsFocused(true);
             rest.onFocus?.(e);
@@ -105,7 +109,10 @@ export const Input = forwardRef<any, InputProps>(({
         {isPasswordField ? (
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            // 20dp glyph → 48x48 effective. Asymmetric on purpose: the extra
+            // width goes right, into the field's own padding, rather than left
+            // where it would swallow taps meant for the text itself.
+            hitSlop={{ top: 14, bottom: 14, left: 8, right: 20 }}
           >
             <Ionicons
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
@@ -158,7 +165,6 @@ const makeStyles = (COLORS: AppColors, isDark: boolean) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
     borderRadius: SPACING.borderRadius.md,
     backgroundColor: COLORS.inputBackground,
     paddingHorizontal: SPACING.md,

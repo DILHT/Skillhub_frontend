@@ -2,19 +2,22 @@
 
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
+  View, FlatList, ScrollView,
   StyleSheet, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { BookingStackParamList, TabScreenNavigationProp } from '@/navigation/AppNavigator';
 import { useMyBookings } from '@/hooks/useBooking';
 import { BookingCard } from '@/components/booking/BookingCard';
 import { Skeleton } from '@/components/common/Skeleton';
-import { Ionicons } from '@expo/vector-icons';
+import { Chip, ScreenHeader } from '@/components/common';
+import { ErrorState, EmptyState } from '@/components/common/StateView';
 import { Booking, BookingStatus } from '@/types/booking.types';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
+import { FLOATING_TAB_BAR_INSET } from '@/constants/layout';
 import { TYPOGRAPHY } from '@/constants/typography';
 
 // Filter tabs shown at the top of the list
@@ -22,13 +25,15 @@ const FILTER_TABS: { label: string; statuses: BookingStatus[] | null }[] = [
   { label: 'All', statuses: null },
   { label: 'Active', statuses: ['pending', 'accepted', 'in_progress'] },
   { label: 'Completed', statuses: ['completed'] },
-  { label: 'Cancelled', statuses: ['cancelled', 'rejected'] },
+  // transformBooking normalises 'rejected' → 'declined'; 'rejected' stays here
+  // so mock-mode fixtures, which bypass the transform, still match.
+  { label: 'Cancelled', statuses: ['cancelled', 'declined', 'rejected'] },
 ];
 
 export default function BookingListScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<TabScreenNavigationProp<BookingStackParamList, 'BookingList'>>();
   const [activeFilter, setActiveFilter] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -48,16 +53,7 @@ export default function BookingListScreen() {
   if (isError) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.centerState}>
-          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textSecondary} />
-          <Text style={styles.errorStateTitle}>Couldn't load</Text>
-          <Text style={styles.errorStateText}>
-            Something went wrong. Please check your connection and try again.
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState onRetry={refetch} />
       </SafeAreaView>
     );
   }
@@ -66,24 +62,24 @@ export default function BookingListScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
 
       {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Bookings</Text>
-      </View>
+      <ScreenHeader title="My Bookings" large />
 
       {/* FILTER TABS */}
-      <View style={styles.tabsRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabsRow}
+      >
         {FILTER_TABS.map((tab, index) => (
-          <TouchableOpacity
+          <Chip
             key={tab.label}
-            style={[styles.tab, activeFilter === index && styles.tabActive]}
+            label={tab.label}
+            active={activeFilter === index}
             onPress={() => setActiveFilter(index)}
-          >
-            <Text style={[styles.tabLabel, activeFilter === index && styles.tabLabelActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
-      </View>
+      </ScrollView>
 
       {/* LIST */}
       <FlatList
@@ -105,19 +101,13 @@ export default function BookingListScreen() {
         }
         ListEmptyComponent={
           !isLoading ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={48} color={COLORS.textTertiary} />
-              <Text style={styles.emptyTitle}>No bookings yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Browse services and book your first appointment
-              </Text>
-              <TouchableOpacity
-                style={styles.browseButton}
-                onPress={() => navigation.navigate('HomeTab', { screen: 'Home' })}
-              >
-                <Text style={styles.browseButtonText}>Browse Services</Text>
-              </TouchableOpacity>
-            </View>
+            <EmptyState
+              icon="calendar-outline"
+              title="No bookings yet"
+              message="Browse services and book your first appointment"
+              actionLabel="Browse Services"
+              onAction={() => navigation.navigate('HomeTab', { screen: 'Home' })}
+            />
           ) : null
         }
         refreshControl={
@@ -137,62 +127,11 @@ export default function BookingListScreen() {
 
 const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    padding: SPACING.screenPadding, paddingBottom: SPACING.md,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.divider,
-  },
-  headerTitle: { fontSize: TYPOGRAPHY.fontSize.xxl, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
+  tabsScroll: { flexGrow: 0, flexShrink: 0, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.divider },
   tabsRow: {
-    flexDirection: 'row', backgroundColor: COLORS.surface,
+    alignItems: 'center', gap: SPACING.sm,
     paddingHorizontal: SPACING.screenPadding, paddingBottom: SPACING.md,
-    gap: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.divider,
   },
-  tab: {
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
-    borderRadius: SPACING.borderRadius.full, borderWidth: 1, borderColor: COLORS.border,
-  },
-  tabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  tabLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary, fontFamily: TYPOGRAPHY.fontFamily.medium },
-  tabLabelActive: { color: COLORS.white },
-  listContent: { padding: SPACING.screenPadding, flexGrow: 1 },
+  listContent: { padding: SPACING.screenPadding, paddingBottom: FLOATING_TAB_BAR_INSET, flexGrow: 1 },
   skeletonCard: { marginBottom: SPACING.md },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: SPACING.xxxl, gap: SPACING.md },
-  emptyTitle: { fontSize: TYPOGRAPHY.fontSize.lg, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
-  emptySubtitle: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary, textAlign: 'center' },
-  browseButton: {
-    backgroundColor: COLORS.primary, paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm, borderRadius: SPACING.borderRadius.full,
-    marginTop: SPACING.sm,
-  },
-  browseButtonText: { color: COLORS.white, fontFamily: TYPOGRAPHY.fontFamily.medium },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 12,
-  },
-  errorStateTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  errorStateText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  retryButton: {
-    marginTop: 8,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 999,
-  },
-  retryButtonText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: '600',
-  },
 });

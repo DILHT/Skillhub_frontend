@@ -45,13 +45,12 @@ export const Skeleton: React.FC<SkeletonProps> = ({
         // Fade to full opacity
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 700,
-          useNativeDriver: true, // ALWAYS true for opacity/transform — uses GPU
+          duration: 600,
+          useNativeDriver: true,
         }),
-        // Fade back to dim
         Animated.timing(opacity, {
           toValue: 0.4,
-          duration: 700,
+          duration: 600,
           useNativeDriver: true,
         }),
       ])

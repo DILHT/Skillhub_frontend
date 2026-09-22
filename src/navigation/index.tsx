@@ -59,9 +59,15 @@ export default function RootNavigator() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem('hasSeenOnboarding').then((val) => {
-      setHasSeenOnboarding(val === 'true');
-    });
+    AsyncStorage.getItem('hasSeenOnboarding')
+      .then((val) => {
+        setHasSeenOnboarding(val === 'true');
+      })
+      // The render gate below is `hasSeenOnboarding === null`, so leaving this
+      // unresolved means an infinite launch spinner with no way out. Treat a
+      // failed read as "not seen" — showing onboarding once more is recoverable;
+      // never booting is not.
+      .catch(() => setHasSeenOnboarding(false));
   }, []);
 
   useEffect(() => {

@@ -7,6 +7,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,12 +29,11 @@ type FormData = z.infer<typeof schema>;
 export default function ForgotPasswordScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
-  const [submitted, setSubmitted] = useState(false);
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { control, handleSubmit, formState: { errors }, getValues } = useForm<FormData>({
+  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { email: '' },
   });
@@ -42,7 +43,7 @@ export default function ForgotPasswordScreen() {
     setError('');
     try {
       await authService.forgotPassword(data.email);
-      setSubmitted(true);
+      navigation.navigate('ResetPassword', { email: data.email });
     } catch (e: any) {
       setError(e?.message ?? 'Something went wrong. Please try again.');
     } finally {
@@ -50,36 +51,7 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  if (submitted) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.successContainer}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="mail-outline" size={36} color={COLORS.primary} />
-          </View>
-          <Text style={styles.successTitle}>Check your email</Text>
-          <Text style={styles.successSubtitle}>
-            We sent a password reset link to{'\n'}
-            <Text style={styles.emailHighlight}>{getValues('email')}</Text>
-          </Text>
-          <Text style={styles.successHint}>
-            Didn't receive it? Check your spam folder or try again.
-          </Text>
-          <Button
-            label="Back to Sign In"
-            onPress={() => navigation.navigate('Login')}
-            fullWidth size="lg"
-            style={styles.button}
-          />
-          <TouchableOpacity onPress={() => setSubmitted(false)}>
-            <Text style={styles.retryText}>Try a different email</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
+return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
@@ -96,7 +68,7 @@ export default function ForgotPasswordScreen() {
 
           <Text style={styles.title}>Forgot password?</Text>
           <Text style={styles.subtitle}>
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we'll send you a 6-digit code to reset your password.
           </Text>
 
           <Controller
@@ -119,7 +91,7 @@ export default function ForgotPasswordScreen() {
           )}
 
           <Button
-            label="Send reset link"
+            label="Send reset code"
             onPress={handleSubmit(onSubmit)}
             isLoading={isLoading}
             fullWidth size="lg"
@@ -167,22 +139,4 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   button: { marginTop: SPACING.lg },
   backToLogin: { alignSelf: 'center', marginTop: SPACING.lg },
   backToLoginText: { color: COLORS.primary, fontSize: TYPOGRAPHY.fontSize.sm, fontFamily: TYPOGRAPHY.fontFamily.medium },
-  successContainer: {
-    flex: 1, padding: SPACING.screenPadding,
-    alignItems: 'center', justifyContent: 'center', gap: SPACING.md,
-  },
-  successTitle: {
-    fontSize: TYPOGRAPHY.fontSize.xxl, fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary, textAlign: 'center',
-  },
-  successSubtitle: {
-    fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textSecondary,
-    textAlign: 'center', lineHeight: 24,
-  },
-  emailHighlight: { color: COLORS.primary, fontFamily: TYPOGRAPHY.fontFamily.medium },
-  successHint: {
-    fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textTertiary,
-    textAlign: 'center', lineHeight: 20,
-  },
-  retryText: { color: COLORS.primary, fontSize: TYPOGRAPHY.fontSize.sm, marginTop: SPACING.sm },
 });

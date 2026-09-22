@@ -61,7 +61,8 @@ export const walletService = {
       params: { limit: 50 },
     });
     const data = response.data as any;
-    const rawItems = data?.items ?? data?.transactions ?? data ?? [];
+    const rawList = data?.items ?? data?.transactions ?? data ?? [];
+    const rawItems = Array.isArray(rawList) ? rawList : [];
       return rawItems.map((t: any) => ({
         ...t,
         // Normalize UPPERCASE backend type to lowercase for the UI
@@ -89,7 +90,7 @@ export const walletService = {
     const response = await apiClient.post('/wallets/me/deposit', {
       amount,
       currency: 'MWK',
-      gateway: 'PAYCHANGU',  // backend expects a gateway enum, not paymentMethod
+      gateway: 'paychangu',  // backend expects a gateway enum, not paymentMethod
       notes: `Top-up via ${method}`,
     });
     return {

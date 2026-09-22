@@ -1,12 +1,14 @@
 ﻿// PLACE AT: src/screens/profile/EditProfileScreen.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, Alert,Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { ProfileStackParamList } from '@/navigation/AppNavigator';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,12 +16,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/service/authService';
-import { Button, Input } from '@/components/common';
+import { Button, Card, Input, ScreenHeader } from '@/components/common';
+import { AVATAR_SIZES } from '@/components/common/Avatar';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
 import { showImageSourceChooser, PickedImage } from '@/utils/imagePicker';
+import { useIsOnline } from '@/hooks/useIsOnline';
+
+// The picker circle matches <Avatar size="xl"> exactly; the badge follows
+// Avatar's own ~28%-of-diameter proportion, floored so the camera glyph
+// still reads at this size.
+const AVATAR_DIMENSION = AVATAR_SIZES.xl;
+const AVATAR_BADGE_SIZE = Math.max(28, Math.round(AVATAR_DIMENSION * 0.28));
 
 const schema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -32,13 +42,13 @@ type FormData = z.infer<typeof schema>;
 export default function EditProfileScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'EditProfile'>>();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const [avatar, setAvatar] = useState<PickedImage | null>(null);
 const currentAvatar = avatar?.uri ?? user?.avatar ?? user?.profilePicture ?? null;
 
-  const { control, handleSubmit, reset, formState: { errors, isDirty } } = useForm<FormData>({
+  const { control, handleSubmit, formState: { errors, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       firstName: user?.firstName ?? '',
@@ -46,6 +56,8 @@ const currentAvatar = avatar?.uri ?? user?.avatar ?? user?.profilePicture ?? nul
       bio: user?.bio ?? '',
     },
   });
+
+  const isOnline = useIsOnline();
 
   const updateMutation = useMutation({
     mutationFn: (data: FormData) =>
@@ -73,19 +85,17 @@ const currentAvatar = avatar?.uri ?? user?.avatar ?? user?.profilePicture ?? nul
   });
 
   const onSubmit = (data: FormData) => {
+    if (!isOnline) {
+      Alert.alert('No Connection', "You're offline. Please reconnect and try again.");
+      return;
+    }
     updateMutation.mutate(data);
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
-          <View style={{ width: 30 }} />
-        </View>
+        <ScreenHeader title="Edit Profile" onBack={() => navigation.goBack()} />
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.form}>
@@ -116,7 +126,7 @@ const currentAvatar = avatar?.uri ?? user?.avatar ?? user?.profilePicture ?? nul
                     ref={ref} label="First name" placeholder="John"
                     value={value} onChangeText={onChange} onBlur={onBlur}
                     error={errors.firstName?.message}
-                    style={styles.halfInput} isRequired
+                    isRequired
                   />
                 )}
               />
@@ -127,18 +137,18 @@ const currentAvatar = avatar?.uri ?? user?.avatar ?? user?.profilePicture ?? nul
                     ref={ref} label="Last name" placeholder="Banda"
                     value={value} onChangeText={onChange} onBlur={onBlur}
                     error={errors.lastName?.message}
-                    style={styles.halfInput} isRequired
+                    isRequired
                   />
                 )}
               />
             </View>
 
             {/* Email is shown read-only — user cannot change email here */}
-            <View style={styles.readOnlyField}>
+            <Card padding="md" gap={4}>
               <Text style={styles.readOnlyLabel}>Email address</Text>
               <Text style={styles.readOnlyValue}>{user?.email ?? '—'}</Text>
               <Text style={styles.readOnlyHint}>Contact support to change your email</Text>
-            </View>
+            </Card>
 
             <Controller
               control={control} name="bio"
@@ -176,22 +186,15 @@ const currentAvatar = avatar?.uri ?? user?.avatar ?? user?.profilePicture ?? nul
 const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: SPACING.screenPadding, paddingBottom: SPACING.md,
-    borderBottomWidth: 1, borderBottomColor: COLORS.divider, backgroundColor: COLORS.surface,
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: TYPOGRAPHY.fontSize.lg, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
   content: { padding: SPACING.screenPadding, paddingBottom: SPACING.xxl },
   form: { gap: SPACING.md },
-  nameRow: { flexDirection: 'row', gap: SPACING.md },
-  halfInput: { flex: 1 },
-  readOnlyField: {
-    backgroundColor: COLORS.inputBackground, borderRadius: SPACING.borderRadius.md,
-    padding: SPACING.md, gap: 4,
+  nameRow: { flexDirection: 'column', gap: SPACING.md },
+  readOnlyLabel: {
+    // Intent: a field label.
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    color: COLORS.textPrimary,
   },
-  readOnlyLabel: { fontSize: TYPOGRAPHY.fontSize.sm, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
   readOnlyValue: { fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textSecondary },
   readOnlyHint: { fontSize: TYPOGRAPHY.fontSize.xs, color: COLORS.textTertiary },
   errorBox: {
@@ -202,23 +205,25 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
 
   avatarSection: {
   alignItems: 'center',
-  marginBottom: 24,
+  marginBottom: SPACING.lg,
 },
+// Circle sized from Avatar's own scale so this bespoke picker and the
+// shared <Avatar size="xl"> elsewhere are the same diameter.
 avatarWrapper: {
-  width: 100,
-  height: 100,
-  borderRadius: 50,
+  width: AVATAR_DIMENSION,
+  height: AVATAR_DIMENSION,
+  borderRadius: AVATAR_DIMENSION / 2,
   position: 'relative',
 },
 avatarImage: {
-  width: 100,
-  height: 100,
-  borderRadius: 50,
+  width: AVATAR_DIMENSION,
+  height: AVATAR_DIMENSION,
+  borderRadius: AVATAR_DIMENSION / 2,
 },
 avatarPlaceholder: {
-  width: 100,
-  height: 100,
-  borderRadius: 50,
+  width: AVATAR_DIMENSION,
+  height: AVATAR_DIMENSION,
+  borderRadius: AVATAR_DIMENSION / 2,
   backgroundColor: COLORS.inputBackground,
   alignItems: 'center',
   justifyContent: 'center',
@@ -229,9 +234,9 @@ avatarEditBadge: {
   position: 'absolute',
   bottom: 0,
   right: 0,
-  width: 32,
-  height: 32,
-  borderRadius: 16,
+  width: AVATAR_BADGE_SIZE,
+  height: AVATAR_BADGE_SIZE,
+  borderRadius: AVATAR_BADGE_SIZE / 2,
   backgroundColor: COLORS.primary,
   alignItems: 'center',
   justifyContent: 'center',
@@ -239,8 +244,8 @@ avatarEditBadge: {
   borderColor: COLORS.surface,
 },
 avatarHint: {
-  marginTop: 8,
-  fontSize: 13,
+  marginTop: SPACING.xs,
+  fontSize: TYPOGRAPHY.fontSize.sm,
   color: COLORS.textSecondary,
 },
 });

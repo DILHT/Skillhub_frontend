@@ -3,15 +3,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   TextInput,
   FlatList,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { ErrorState, EmptyState } from '@/components/common/StateView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { HomeStackParamList } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteServices } from '@/hooks/useServices';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -21,12 +23,13 @@ import { Service } from '@/types/service.types';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
+import { FLOATING_TAB_BAR_INSET } from '@/constants/layout';
 import { TYPOGRAPHY } from '@/constants/typography';
 
 export default function SearchScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'Search'>>();
   const inputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
 
@@ -55,16 +58,7 @@ export default function SearchScreen() {
   if (isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centerState}>
-          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textSecondary} />
-          <Text style={styles.errorStateTitle}>Couldn't load</Text>
-          <Text style={styles.errorStateText}>
-            Something went wrong. Please check your connection and try again.
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState onRetry={refetch} />
       </SafeAreaView>
     );
   }
@@ -137,21 +131,16 @@ export default function SearchScreen() {
         }
         ListEmptyComponent={
           !isLoading && debouncedSearch ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>
-                No results for "{debouncedSearch}"
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                Try different keywords
-              </Text>
-            </View>
+            <EmptyState
+              icon="search-outline"
+              title={`No results for "${debouncedSearch}"`}
+              message="Try different keywords"
+            />
           ) : !debouncedSearch ? (
-            <View style={styles.promptState}>
-              <Ionicons name="search" size={40} color={COLORS.textTertiary} />
-              <Text style={styles.promptText}>
-                Search for any service across Malawi
-              </Text>
-            </View>
+            <EmptyState
+              icon="search"
+              title="Search for any service across Malawi"
+            />
           ) : null
         }
         onEndReached={handleEndReached}
@@ -205,64 +194,8 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   // ── Results ──────────────────────────────────────────────────────────────────
   listContent: {
     padding: SPACING.screenPadding,
+    paddingBottom: FLOATING_TAB_BAR_INSET,
     flexGrow: 1,
   },
 
-  // ── Empty / prompt states ────────────────────────────────────────────────────
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: SPACING.xxl,
-    gap: SPACING.sm,
-  },
-  emptyTitle: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  promptState: {
-    alignItems: 'center',
-    paddingTop: SPACING.xxxl,
-    gap: SPACING.md,
-  },
-  promptText: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 12,
-  },
-  errorStateTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  errorStateText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  retryButton: {
-    marginTop: 8,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 999,
-  },
-  retryButtonText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: '600',
-  },
 });

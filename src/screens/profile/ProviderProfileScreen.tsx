@@ -2,18 +2,21 @@
 
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView,
   StyleSheet, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '@/service/api';
+import { PROVIDER_SERVICE_KEYS } from '@/hooks/useProviderServices';
 import { Avatar } from '@/components/common/Avatar';
+import { ScreenHeader, SectionHeader } from '@/components/common';
 import { RatingStars } from '@/components/service/RatingStars';
 import { ServiceCard } from '@/components/service/ServiceCard';
-import { ServiceCardSkeleton } from '@/components/common/Skeleton';
+import { Skeleton, ServiceCardSkeleton } from '@/components/common/Skeleton';
 import { HomeStackParamList } from '@/navigation/AppNavigator';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
@@ -37,7 +40,9 @@ function useProviderProfile(providerId: string) {
 
 function useProviderServices(providerId: string) {
   return useQuery({
-    queryKey: ['provider-services', providerId],
+    // Namespaced under 'byProvider' so the owner's own listings
+    // (PROVIDER_SERVICE_KEYS.myServices) no longer share this prefix.
+    queryKey: PROVIDER_SERVICE_KEYS.byProvider(providerId),
     queryFn: async () => {
       const response = await apiClient.get(`/services/provider/${providerId}`);
       return response.data;
@@ -49,31 +54,26 @@ function useProviderServices(providerId: string) {
 export default function ProviderProfileScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'ProviderProfile'>>();
   const route = useRoute<RouteProps>();
   const { providerId } = route.params;
 
   const { data: provider, isLoading: providerLoading } = useProviderProfile(providerId);
   const { data: servicesData, isLoading: servicesLoading } = useProviderServices(providerId);
 
-  const services = servicesData?.services ?? servicesData ?? [];
+  const rawServices = servicesData?.services ?? servicesData ?? [];
+  const services = Array.isArray(rawServices) ? rawServices : [];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Provider Profile</Text>
-        <View style={{ width: 30 }} />
-      </View>
+      <ScreenHeader title="Provider Profile" onBack={() => navigation.goBack()} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {providerLoading ? (
           <View style={styles.loadingCard}>
-            <View style={styles.avatarSkeleton} />
-            <View style={styles.textSkeleton} />
-            <View style={styles.textSkeletonShort} />
+            <Skeleton width={72} height={72} borderRadius={36} />
+            <Skeleton width={160} height={18} />
+            <Skeleton width={100} height={14} />
           </View>
         ) : provider ? (
           <>
@@ -124,14 +124,14 @@ export default function ProviderProfileScreen() {
             {/* ABOUT */}
             {provider.professionalSummary && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>About</Text>
+                <SectionHeader title="About" />
                 <Text style={styles.bio}>{provider.professionalSummary}</Text>
               </View>
             )}
 
             {/* SERVICES */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Services offered</Text>
+              <SectionHeader title="Services offered" />
               {servicesLoading ? (
                 <><ServiceCardSkeleton /><ServiceCardSkeleton /></>
               ) : services.length > 0 ? (
@@ -156,13 +156,6 @@ export default function ProviderProfileScreen() {
 
 const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: SPACING.screenPadding, paddingBottom: SPACING.md,
-    borderBottomWidth: 1, borderBottomColor: COLORS.divider, backgroundColor: COLORS.surface,
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: TYPOGRAPHY.fontSize.lg, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
   content: { padding: SPACING.screenPadding, gap: SPACING.lg, paddingBottom: SPACING.xxl },
   profileCard: {
     backgroundColor: COLORS.surface, borderRadius: SPACING.borderRadius.lg,
@@ -184,7 +177,6 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   availableDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.success },
   availableText: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.successText, fontFamily: TYPOGRAPHY.fontFamily.medium },
   section: { gap: SPACING.md },
-  sectionTitle: { fontSize: TYPOGRAPHY.fontSize.lg, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
   bio: { fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textSecondary, lineHeight: 24 },
   emptyText: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
   errorState: { alignItems: 'center', paddingTop: SPACING.xxxl, gap: SPACING.md },

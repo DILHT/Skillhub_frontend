@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/service/authService';
@@ -34,7 +36,7 @@ const RESEND_COUNTDOWN = 60; // seconds before resend is enabled
 export default function OTPScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const route = useRoute<RouteProp<RouteParams, 'OTP'>>();
   const {
     email,
@@ -130,6 +132,8 @@ export default function OTPScreen() {
             maxLength={6}
             placeholder="000000"
             placeholderTextColor={COLORS.textTertiary}
+            cursorColor={COLORS.primary}
+            selectionColor={COLORS.primary}
           />
 
           {verifyError && (

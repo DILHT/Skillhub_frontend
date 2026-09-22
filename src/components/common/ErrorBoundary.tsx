@@ -4,9 +4,10 @@
 
 import React, { Component, ReactNode } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  View, Text, StyleSheet, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from './Button';
 
 interface Props {
   children: ReactNode;
@@ -59,9 +60,11 @@ export class ErrorBoundary extends Component<Props, State> {
             </ScrollView>
           )}
 
-          <TouchableOpacity style={styles.button} onPress={this.handleReset}>
-            <Text style={styles.buttonText}>Try Again</Text>
-          </TouchableOpacity>
+          {/* This boundary renders OUTSIDE ThemeProvider, so useAppTheme()
+              falls back to the light palette here. That is deliberate: a
+              crash screen in the wrong theme beats a crash screen that
+              cannot render at all. */}
+          <Button label="Try Again" onPress={this.handleReset} size="lg" />
         </View>
       );
     }
@@ -102,17 +105,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#991B1B',
     fontFamily: 'monospace',
-  },
-  button: {
-    backgroundColor: '#1B7A4E',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

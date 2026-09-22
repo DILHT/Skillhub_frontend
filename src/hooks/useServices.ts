@@ -21,7 +21,7 @@
 //   If it throws, React Query marks the query as 'error'.
 //   If it resolves, the result is cached under the query key.
  
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, QueryClient } from '@tanstack/react-query';
 import { serviceService } from '../service/serviceService';
 import { ServiceFilters } from '../types/service.types';
  
@@ -40,6 +40,20 @@ export const SERVICE_QUERY_KEYS = {
   detail: (id: string) => [...SERVICE_QUERY_KEYS.details(), id] as const,
   categories: ['categories'] as const,
 };
+
+// ── CATALOGUE INVALIDATION ────────────────────────────────────────────────────
+//
+// The hooks in this file are read-only — the writes that change what the
+// catalogue contains live in useProviderServices (create / update / toggle).
+// This helper lives next to the keys so the owner of the cache also owns the
+// rule for busting it, and callers can't forget half of it.
+//
+// Both keys are needed: `home` is a separate top-level key, so invalidating
+// `all` ('services') does NOT reach the home feed by prefix.
+export function invalidateServiceCatalogue(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: SERVICE_QUERY_KEYS.all });
+  qc.invalidateQueries({ queryKey: SERVICE_QUERY_KEYS.home });
+}
  
 // ── HOOK 1: useHomeData ───────────────────────────────────────────────────────
 //

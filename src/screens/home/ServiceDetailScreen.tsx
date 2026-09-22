@@ -8,15 +8,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { HomeStackParamList, TabScreenNavigationProp } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { useServiceDetail } from '@/hooks/useServices';
 import { useBookingStore } from '@/store/bookingStore';
 import { useAuthStore } from '@/store/authStore';
 import { Avatar } from '@/components/common/Avatar';
-import { Button } from '@/components/common';
+import { Button, SectionHeader } from '@/components/common';
 import { RatingStars } from '@/components/service/RatingStars';
 import { ServiceCardSkeleton } from '@/components/common/Skeleton';
-import { HomeStackParamList } from '@/navigation/AppNavigator';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SmartImage } from '@/components/common/SmartImage';
@@ -37,7 +37,7 @@ function formatPrice(price: number, currency: string, unit: string): string {
 export default function ServiceDetailScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<TabScreenNavigationProp<HomeStackParamList, 'ServiceDetail'>>();
   const route = useRoute<RouteProps>();
   const { serviceId } = route.params;
 
@@ -50,7 +50,10 @@ export default function ServiceDetailScreen() {
   const handleBookNow = () => {
     if (!service) return;
     startBooking(service);
-    navigation.navigate('BookingFlow', { serviceId: service.id });
+    navigation.navigate('BookingsTab', {
+      screen: 'BookingFlow',
+      params: { serviceId: service.id },
+    });
   };
 
   // ── LOADING ─────────────────────────────────────────────────────────────────
@@ -80,7 +83,7 @@ export default function ServiceDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       <ScrollView
         style={styles.scroll}
@@ -174,7 +177,7 @@ export default function ServiceDetailScreen() {
           <View style={styles.divider} />
 
           {/* ── PROVIDER SECTION ─────────────────────────────────────────────── */}
-          <Text style={styles.sectionLabel}>About the provider</Text>
+          <SectionHeader title="About the provider" />
 
           <TouchableOpacity
             style={styles.providerCard}
@@ -210,14 +213,14 @@ export default function ServiceDetailScreen() {
           <View style={styles.divider} />
 
           {/* ── DESCRIPTION ──────────────────────────────────────────────────── */}
-          <Text style={styles.sectionLabel}>Description</Text>
+          <SectionHeader title="Description" />
           <Text style={styles.description}>{service.description}</Text>
 
           {/* ── TAGS ─────────────────────────────────────────────────────────── */}
           {service.tags.length > 0 && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.sectionLabel}>Tags</Text>
+              <SectionHeader title="Tags" />
               <View style={styles.tagsRow}>
                 {service.tags.map((tag) => (
                   <View key={tag} style={styles.tag}>
@@ -323,7 +326,6 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   locationText: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
   distanceText: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textTertiary },
   divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: SPACING.sm },
-  sectionLabel: { fontSize: TYPOGRAPHY.fontSize.lg, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
 
   // Provider card
   providerCard: {

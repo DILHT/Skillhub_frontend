@@ -6,7 +6,7 @@ import { apiClient } from './api';
 import { AuthResponse, RegisterResponse, RefreshResponse, User } from '../types/user.types';
 
 function toBackendRegisterRole(role: 'client' | 'provider') {
-  return role === 'provider' ? 'PROVIDER' : 'CLIENT';
+  return role === 'provider' ? 'provider' : 'client';
 }
 
 export const authService = {
@@ -31,12 +31,12 @@ export const authService = {
     return response.data;
   },
 
-  // POST /auth/register/verify-email
+  // POST /auth/verify/email/otp
   verifyEmailOTP: async (data: {
     email: string;
     otp: string;
   }): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/auth/register/verify-email', {
+    const response = await apiClient.post<AuthResponse>('/auth/verify/email/otp', {
       email: data.email,
       otp: data.otp,
     });
@@ -81,9 +81,9 @@ export const authService = {
     return d?.user ?? d;
   },
 
-  // POST /auth/refresh
+  // POST /auth/token/refresh
   refreshToken: async (refreshToken: string): Promise<RefreshResponse> => {
-    const response = await apiClient.post<RefreshResponse>('/auth/refresh', {
+    const response = await apiClient.post<RefreshResponse>('/auth/token/refresh', {
       refreshToken,
     });
     return response.data;
@@ -92,6 +92,22 @@ export const authService = {
   // POST /auth/password/forgot
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     const response = await apiClient.post('/auth/password/forgot', { email });
+    return response.data;
+  },
+
+  // POST /auth/password/reset  — field names from backend ResetPasswordRequest DTO
+  resetPassword: async (data: {
+    email: string;
+    token: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<{ message: string }> => {
+    const response = await apiClient.post('/auth/password/reset', {
+      email: data.email,
+      token: data.token,
+      newPassword: data.newPassword,
+      confirmPassword: data.confirmPassword,
+    });
     return response.data;
   },
 

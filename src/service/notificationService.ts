@@ -45,7 +45,7 @@ export const notificationService = {
     });
     const data = response.data as any;
     const list = data?.notifications ?? data ?? [];
-    return list.map(normalize);
+    return Array.isArray(list) ? list.map(normalize) : [];
   },
 
   // GET /notifications/me/unread-count

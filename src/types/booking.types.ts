@@ -13,7 +13,9 @@ export type BookingStatus =
   | 'in_progress'   // Service is currently happening
   | 'completed'     // Service done, payment released from escrow
   | 'cancelled'     // Cancelled by client before acceptance
-  | 'rejected';     // Provider declined the booking
+  | 'rejected'      // Legacy client-side name for provider decline
+  | 'declined'      // Provider declined (backend canonical term)
+  | 'disputed';     // Dispute raised by either party
 
 export type PaymentStatus = 'unpaid' | 'held' | 'released' | 'refunded';
 
@@ -27,14 +29,20 @@ export interface TimeSlot {
 }
 
 // The full booking entity — what comes back from the API
+//
+// service / client / provider are OPTIONAL on purpose: the backend
+// BookingDto returns IDs only (serviceId, clientId, providerId) plus a
+// denormalized `title`. transformBooking() synthesises safe placeholder
+// objects, but marking these optional makes TypeScript reject any read
+// that dereferences them without a guard.
 export interface Booking {
   id: string;
   serviceId: string;
-  service: Service;
+  service?: Service;
   clientId: string;
-  client: Pick<User, 'id' | 'firstName' | 'lastName' | 'avatar' | 'phone'>;
+  client?: Pick<User, 'id' | 'firstName' | 'lastName' | 'avatar' | 'phone'>;
   providerId: string;
-  provider: ServiceProvider;
+  provider?: ServiceProvider;
   status: BookingStatus;
   paymentStatus: PaymentStatus;
   scheduledDate: string;    // ISO date string

@@ -17,6 +17,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { Button, Input } from '@/components/common';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppTheme } from '@/context/ThemeContext';
@@ -56,7 +58,7 @@ export default function LoginScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
   const devStyles = makeDevStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { login, isLoggingIn, loginError } = useAuth({
     onEmailNotVerified: (email) => {
       navigation.navigate('OTP', { email, canResendImmediately: true });
@@ -93,6 +95,7 @@ export default function LoginScreen() {
 
   const currentEmail = watch('email').trim().toLowerCase();
   const showVerifyEmailAction = isEmailVerificationError(loginError);
+  const isMockModeEnabled = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
 
   const onSubmit = (data: LoginFormData) => {
     login({ ...data, email: data.email.trim().toLowerCase() });
@@ -210,7 +213,7 @@ export default function LoginScreen() {
             />
 
             {/* DEV ONLY bypass buttons */}
-            {(__DEV__ || process.env.EXPO_PUBLIC_USE_MOCK === 'true') && (
+            {isMockModeEnabled && (
               <View style={devStyles.container}>
                 <View style={devStyles.divider}>
                   <View style={devStyles.line} />
@@ -321,7 +324,7 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
     paddingBottom: SPACING.md,
   },
   footerText: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
-  footerLink: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.primary, fontFamily: 'System' },
+  footerLink: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.primary, fontFamily: TYPOGRAPHY.fontFamily.medium },
 });
 
 const makeDevStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({

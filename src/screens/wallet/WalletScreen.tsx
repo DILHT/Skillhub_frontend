@@ -1,6 +1,6 @@
 ﻿// src/screens/wallet/WalletScreen.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, RefreshControl,
@@ -8,15 +8,24 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { WalletStackParamList } from '@/navigation/AppNavigator';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { walletService } from '@/service/walletService';
+import { WALLET_QUERY_KEYS } from '@/hooks/useWallet';
 import { Transaction } from '@/types/wallet.types';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
+import { FLOATING_TAB_BAR_INSET } from '@/constants/layout';
 import { TYPOGRAPHY } from '@/constants/typography';
 import { TRANSACTION_TYPE_ICONS, CREDIT_TRANSACTION_TYPES } from '@/constants/wallet';
+import { ErrorState, ScreenHeader, SectionHeader } from '@/components/common';
+
+const BALANCE_HIDDEN_KEY = 'walletBalanceHidden';
 
 function formatAmount(amount: number, currency: string): string {
   return `${currency} ${new Intl.NumberFormat('en-MW').format(amount)}`;
@@ -25,17 +34,34 @@ function formatAmount(amount: number, currency: string): string {
 export default function WalletScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<WalletStackParamList, 'Wallet'>>();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [balanceHidden, setBalanceHidden] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(BALANCE_HIDDEN_KEY)
+      .then((v) => {
+        if (v === 'true') setBalanceHidden(true);
+      })
+      // Falls back to the default (visible). A failed preference read must not
+      // surface as an unhandled rejection.
+      .catch(() => setBalanceHidden(false));
+  }, []);
+
+  const toggleBalanceVisibility = async () => {
+    const next = !balanceHidden;
+    setBalanceHidden(next);
+    await AsyncStorage.setItem(BALANCE_HIDDEN_KEY, String(next));
+  };
 
   const { data: balance, isLoading: isBalanceLoading, isError: isBalanceError, refetch: refetchBalance } = useQuery({
-    queryKey: ['wallet-balance'],
+    queryKey: WALLET_QUERY_KEYS.balance,
     queryFn: walletService.getBalance,
     staleTime: 30 * 1000,
   });
 
   const { data: transactions = [], isError: isTransactionsError, refetch: refetchTransactions } = useQuery({
-    queryKey: ['wallet-transactions'],
+    queryKey: WALLET_QUERY_KEYS.transactions,
     queryFn: walletService.getTransactions,
     staleTime: 60 * 1000,
   });
@@ -49,16 +75,7 @@ export default function WalletScreen() {
   if (isBalanceError || isTransactionsError) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.centerState}>
-          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textSecondary} />
-          <Text style={styles.errorStateTitle}>Couldn't load</Text>
-          <Text style={styles.errorStateText}>
-            Something went wrong. Please check your connection and try again.
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => Promise.all([refetchBalance(), refetchTransactions()])}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState onRetry={() => Promise.all([refetchBalance(), refetchTransactions()])} />
       </SafeAreaView>
     );
   }
@@ -68,9 +85,7 @@ export default function WalletScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Wallet</Text>
-      </View>
+      <ScreenHeader title="Wallet" large />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -84,21 +99,52 @@ export default function WalletScreen() {
         }
       >
         {/* BALANCE CARD */}
-        <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceAmount}>
-            {isBalanceLoading ? (
-              <ActivityIndicator size="small" color={COLORS.white} />
-            ) : (
-              formatAmount(balance?.balance ?? 0, currency)
-            )}
-          </Text>
-          {balance && balance.escrowBalance > 0 && (
-            <Text style={styles.escrowText}>
-              + {formatAmount(balance.escrowBalance, currency)} in escrow
-            </Text>
-          )}
+        <View style={styles.cardWrapper}>
+          <LinearGradient
+            colors={['#2563EB', '#1D4ED8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.balanceCard}
+          >
+            {/* TOP ROW */}
+            <View style={styles.cardTopRow}>
+              <View style={styles.cardTopLeft}>
+                <Text style={styles.balanceLabel}>Available balance</Text>
+                <View style={styles.amountRow}>
+                  {isBalanceLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.balanceAmount}>
+                      {balanceHidden ? `${currency} ••••••` : formatAmount(balance?.balance ?? 0, currency)}
+                    </Text>
+                  )}
+                  <TouchableOpacity onPress={toggleBalanceVisibility} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons
+                      name={balanceHidden ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color="rgba(255,255,255,0.8)"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.walletIconBox}>
+                <Ionicons name="wallet-outline" size={22} color="#fff" />
+              </View>
+            </View>
 
+            {/* BOTTOM ROW */}
+            <View style={styles.cardBottomRow}>
+              <View>
+                <Text style={styles.escrowLabel}>In escrow</Text>
+                <Text style={styles.escrowAmount}>
+                  {balanceHidden ? '••••••' : formatAmount(balance?.escrowBalance ?? 0, currency)}
+                </Text>
+              </View>
+              <Text style={styles.cardFlourish}>{`•••• ${new Date().getFullYear()}`}</Text>
+            </View>
+          </LinearGradient>
+
+          {/* ACTION BUTTONS */}
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={styles.actionBtn}
@@ -111,15 +157,15 @@ export default function WalletScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() =>
-                  Alert.alert(
-                    'Withdraw Funds',
-                    'Withdrawal to mobile money will be available once your account is verified. Please complete identity verification first.',
-                    [{ text: 'OK' }]
-                  )
-                }
-              >
+              style={styles.actionBtn}
+              onPress={() =>
+                Alert.alert(
+                  'Withdraw Funds',
+                  'Withdrawal to mobile money will be available once your account is verified. Please complete identity verification first.',
+                  [{ text: 'OK' }]
+                )
+              }
+            >
               <View style={styles.actionIcon}>
                 <Ionicons name="arrow-up-outline" size={24} color={COLORS.primary} />
               </View>
@@ -140,12 +186,7 @@ export default function WalletScreen() {
 
         {/* RECENT TRANSACTIONS */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent transactions</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
-              <Text style={styles.seeAll}>See all</Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader title="Recent transactions" action={{ label: "See all", onPress: () => navigation.navigate("Transactions") }} />
 
           <View style={styles.transactionList}>
             {recentTransactions.length === 0 ? (
@@ -172,7 +213,7 @@ export default function WalletScreen() {
                         <Text style={styles.txnDescription} numberOfLines={1}>
                           {txn.description}
                         </Text>
-                        <Text style={styles.txnDate}>{txn.createdAt.slice(0, 10)}</Text>
+                        <Text style={styles.txnDate}>{txn.createdAt?.slice(0, 10) ?? ''}</Text>
                       </View>
                       <Text style={[
                         styles.txnAmount,
@@ -191,7 +232,7 @@ export default function WalletScreen() {
           </View>
         </View>
 
-        <View style={{ height: SPACING.xxl }} />
+        <View style={{ height: FLOATING_TAB_BAR_INSET }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -199,52 +240,55 @@ export default function WalletScreen() {
 
 const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    padding: SPACING.screenPadding, paddingBottom: SPACING.md,
-    borderBottomWidth: 1, borderBottomColor: COLORS.divider,
-    backgroundColor: COLORS.surface,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.fontSize.xxl,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
+  cardWrapper: {
+    paddingHorizontal: SPACING.screenPadding,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.md,
+    gap: SPACING.lg,
   },
   balanceCard: {
-    backgroundColor: COLORS.primary,
-    padding: SPACING.xl,
-    alignItems: 'center',
-    gap: SPACING.sm,
+    borderRadius: 20,
+    padding: 20,
+    gap: SPACING.lg,
   },
-  balanceLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: 'rgba(255,255,255,0.75)' },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  cardTopLeft: { gap: 6 },
+  balanceLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: '#BFDBFE' },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   balanceAmount: {
-    fontSize: 36,
+    fontSize: TYPOGRAPHY.fontSize.xxxl,
     fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.white,
+    color: '#fff',
   },
-  escrowText: { fontSize: TYPOGRAPHY.fontSize.sm, color: 'rgba(255,255,255,0.65)' },
-  actionRow: { flexDirection: 'row', gap: SPACING.xl, marginTop: SPACING.md },
+  walletIconBox: {
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  escrowLabel: { fontSize: TYPOGRAPHY.fontSize.xs, color: '#BFDBFE', marginBottom: 2 },
+  escrowAmount: { fontSize: TYPOGRAPHY.fontSize.md, fontFamily: TYPOGRAPHY.fontFamily.medium, color: '#fff' },
+  cardFlourish: { fontSize: TYPOGRAPHY.fontSize.sm, color: '#BFDBFE', letterSpacing: 2 },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
   actionBtn: { alignItems: 'center', gap: SPACING.xs },
   actionIcon: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  actionLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.white },
+  actionLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
   section: { padding: SPACING.screenPadding },
-  sectionHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: SPACING.md,
-  },
-  sectionTitle: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-  },
-  seeAll: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.primary,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-  },
   transactionList: {
     backgroundColor: COLORS.surface,
     borderRadius: SPACING.borderRadius.lg,
@@ -270,35 +314,5 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   txnDivider: {
     height: 1, backgroundColor: COLORS.divider,
     marginLeft: SPACING.md + 40 + SPACING.md,
-  },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 12,
-  },
-  errorStateTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  errorStateText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  retryButton: {
-    marginTop: 8,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 999,
-  },
-  retryButtonText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: '600',
   },
 });

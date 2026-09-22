@@ -142,19 +142,6 @@ export const serviceService = {
     if (filters.categoryId) params.categoryId = filters.categoryId;
     if (filters.minPrice) params.minPrice = filters.minPrice;
     if (filters.maxPrice) params.maxPrice = filters.maxPrice;
-    if (filters.sortBy) {
-      const sortMap: Record<string, { sortBy: string; order: string }> = {
-        newest:     { sortBy: 'createdAt', order: 'desc' },
-        rating:     { sortBy: 'rating',    order: 'desc' },
-        price_asc:  { sortBy: 'basePrice', order: 'asc'  },
-        price_desc: { sortBy: 'basePrice', order: 'desc' },
-      };
-      const mapped = sortMap[filters.sortBy];
-      if (mapped) {
-        params.sortBy = mapped.sortBy;
-        params.order  = mapped.order;
-      }
-    }
 
     const response = await apiClient.get('/services', { params });
     const rawData = response.data as any;

@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BookingStackParamList } from '@/navigation/AppNavigator';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,7 +21,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useBookingStore } from '@/store/bookingStore';
 import { useCreateBooking } from '@/hooks/useBooking';
-import { Button, Input } from '@/components/common';
+import { useIsOnline } from '@/hooks/useIsOnline';
+import { Button, Input, ScreenHeader } from '@/components/common';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
@@ -53,10 +56,11 @@ function formatHHMM(d: Date): string {
 export default function BookingScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<BookingStackParamList, 'BookingFlow'>>();
   const draft = useBookingStore((s) => s.draft);
   const updateDraft = useBookingStore((s) => s.updateDraft);
   const { mutate: createBooking, isPending, error: apiError } = useCreateBooking();
+  const isOnline = useIsOnline();
   const [error, setError] = useState('');
 
   const [dateValue, setDateValue] = useState<Date | null>(() => {
@@ -93,6 +97,10 @@ export default function BookingScreen() {
 
   const onSubmit = (data: BookingFormData) => {
     setError('');
+    if (!isOnline) {
+      setError("You're offline. Please reconnect and try again.");
+      return;
+    }
 
     if (!dateValue) {
       setError('Please select a date.');
@@ -155,16 +163,7 @@ export default function BookingScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* HEADER */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Book Service</Text>
-          <View style={{ width: 22 }} />
-        </View>
+        <ScreenHeader title="Book Service" onBack={() => navigation.goBack()} />
 
         <ScrollView
           contentContainerStyle={styles.content}
@@ -332,17 +331,6 @@ export default function BookingScreen() {
 const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: SPACING.screenPadding, paddingBottom: SPACING.md,
-    borderBottomWidth: 1, borderBottomColor: COLORS.divider,
-    backgroundColor: COLORS.surface,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-  },
   content: { padding: SPACING.screenPadding, gap: SPACING.lg },
   serviceSummary: {
     backgroundColor: COLORS.primaryLight,
@@ -398,13 +386,13 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
     backgroundColor: COLORS.errorBg,
     borderWidth: 1,
     borderColor: COLORS.errorBorder,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: SPACING.borderRadius.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
   },
   validationErrorText: {
     color: COLORS.errorText,
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.fontSize.md,
     textAlign: 'center',
   },
   errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.md },

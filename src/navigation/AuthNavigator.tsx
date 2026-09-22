@@ -45,6 +45,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import { COLORS } from '../constants/colors';
 
 export type AuthStackParamList = {
@@ -57,6 +58,7 @@ export type AuthStackParamList = {
     canResendImmediately?: boolean;
   };
   ForgotPassword: undefined;
+  ResetPassword: { email: string };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -75,6 +77,7 @@ export default function AuthNavigator() {
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="OTP" component={OTPScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </Stack.Navigator>
   );
 }

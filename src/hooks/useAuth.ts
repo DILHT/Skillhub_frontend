@@ -6,6 +6,7 @@ import { authService } from '../service/authService';
 import { socketService } from '../service/socketService';
 import { useAuthStore } from '../store/authStore';
 import { storage } from '../utils/storage';
+import { clearQueryCache } from '../service/queryClient';
 import { User } from '../types/user.types';
 
 function normalizeUserRole(role: unknown): User['role'] {
@@ -169,6 +170,9 @@ export function useAuth(options: UseAuthOptions = {}) {
     try { await authService.logout(); } catch {}
     socketService.disconnect();
     clearStore();
+    // Both halves matter: storage.clear() removes the persisted copy,
+    // clearQueryCache() also drops what is currently in memory.
+    await clearQueryCache();
     await storage.clear();
     logAuthEvent('logout:complete');
   };

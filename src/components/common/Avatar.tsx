@@ -32,8 +32,10 @@ function getInitials(name: string): string {
     .join('');
 }
 
-// Map size prop to pixel dimensions
-const AVATAR_SIZES: Record<AvatarSize, number> = {
+// Map size prop to pixel dimensions.
+// Exported so bespoke avatar treatments (EditProfileScreen's camera-badge
+// picker) can size their circle from the same scale instead of guessing.
+export const AVATAR_SIZES: Record<AvatarSize, number> = {
   xs: 24,
   sm: 32,
   md: 40,

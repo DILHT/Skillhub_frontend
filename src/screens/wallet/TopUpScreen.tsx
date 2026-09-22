@@ -4,13 +4,19 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { WalletStackParamList } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Input } from '@/components/common';
+import { Button, Card, Chip, Input, ScreenHeader } from '@/components/common';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
 import { TYPOGRAPHY } from '@/constants/typography';
 import { walletService } from '@/service/walletService';
+import { haptics } from '@/utils/haptics';
+import { useIsOnline } from '@/hooks/useIsOnline';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateWallet } from '@/hooks/useWallet';
 
 const QUICK_AMOUNTS = [5000, 10000, 20000, 50000, 100000];
 
@@ -23,9 +29,11 @@ const PAYMENT_METHODS = [
 export default function TopUpScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<WalletStackParamList, 'TopUp'>>();
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('airtel');
+  const isOnline = useIsOnline();
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -34,16 +42,25 @@ export default function TopUpScreen() {
 
   const handleTopUp = async () => {
       if (numericAmount < 1000) return;
+      if (!isOnline) {
+        setErrorMessage("You're offline. Please reconnect and try again.");
+        return;
+      }
       setIsLoading(true);
       setErrorMessage('');
       setSuccessMessage('');
       try {
         const result = await walletService.topUp(numericAmount, selectedMethod);
         if (result.success) {
+          haptics.success();
+          // Bust the balance and ledger before navigating back, so the wallet
+          // repaints with the new figure instead of the cached pre-top-up one.
+          invalidateWallet(queryClient);
           setSuccessMessage(result.message);
           setTimeout(() => navigation.goBack(), 2000);
         }
       } catch (e: any) {
+        haptics.error();
         setErrorMessage(e?.message ?? 'Top-up failed. Please try again.');
       } finally {
         setIsLoading(false);
@@ -53,13 +70,7 @@ export default function TopUpScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Top Up Wallet</Text>
-          <View style={{ width: 30 }} />
-        </View>
+        <ScreenHeader title="Top Up Wallet" onBack={() => navigation.goBack()} />
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* AMOUNT INPUT */}
@@ -75,15 +86,12 @@ export default function TopUpScreen() {
             />
             <View style={styles.quickAmounts}>
               {QUICK_AMOUNTS.map((a) => (
-                <TouchableOpacity
+                <Chip
                   key={a}
-                  style={[styles.quickChip, numericAmount === a && styles.quickChipActive]}
+                  label={new Intl.NumberFormat('en-MW').format(a)}
+                  active={numericAmount === a}
                   onPress={() => setAmount(String(a))}
-                >
-                  <Text style={[styles.quickChipLabel, numericAmount === a && styles.quickChipLabelActive]}>
-                    {new Intl.NumberFormat('en-MW').format(a)}
-                  </Text>
-                </TouchableOpacity>
+                />
               ))}
             </View>
           </View>
@@ -111,7 +119,7 @@ export default function TopUpScreen() {
           </View>
 
           {numericAmount > 0 && (
-            <View style={styles.summaryCard}>
+            <Card gap={SPACING.sm}>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Amount</Text>
                 <Text style={styles.summaryValue}>MWK {new Intl.NumberFormat('en-MW').format(numericAmount)}</Text>
@@ -126,7 +134,7 @@ export default function TopUpScreen() {
                   MWK {new Intl.NumberFormat('en-MW').format(numericAmount)}
                 </Text>
               </View>
-            </View>
+            </Card>
           )}
 
           {successMessage !== '' && (
@@ -146,7 +154,7 @@ export default function TopUpScreen() {
             )}
 
           <Button
-            label={`Top Up MWK ${numericAmount > 0 ? new Intl.NumberFormat('en-MW').format(numericAmount) : ''}`}
+            label={numericAmount > 0 ? `Top Up MWK ${new Intl.NumberFormat('en-MW').format(numericAmount)}` : 'Top Up'}
             onPress={handleTopUp}
             isLoading={isLoading}
             disabled={numericAmount < 1000}
@@ -165,24 +173,10 @@ export default function TopUpScreen() {
 const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: SPACING.screenPadding, paddingBottom: SPACING.md,
-    borderBottomWidth: 1, borderBottomColor: COLORS.divider, backgroundColor: COLORS.surface,
-  },
-  headerTitle: { fontSize: TYPOGRAPHY.fontSize.lg, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
   content: { padding: SPACING.screenPadding, gap: SPACING.lg, paddingBottom: SPACING.xxl },
   amountSection: { gap: SPACING.md },
   label: { fontSize: TYPOGRAPHY.fontSize.md, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
-  quickAmounts: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  quickChip: {
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
-    borderRadius: SPACING.borderRadius.full, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  quickChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  quickChipLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
-  quickChipLabelActive: { color: COLORS.white, fontFamily: TYPOGRAPHY.fontFamily.medium },
+  quickAmounts: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: SPACING.sm },
   methodSection: { gap: SPACING.sm },
   methodRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
@@ -192,10 +186,6 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   methodRowActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
   methodIcon: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   methodName: { flex: 1, fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textPrimary },
-  summaryCard: {
-    backgroundColor: COLORS.surface, borderRadius: SPACING.borderRadius.lg,
-    padding: SPACING.lg, gap: SPACING.sm, borderWidth: 1, borderColor: COLORS.divider,
-  },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   summaryLabel: { fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textSecondary },
   summaryValue: { fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textPrimary },

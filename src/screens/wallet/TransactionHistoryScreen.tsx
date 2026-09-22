@@ -2,14 +2,18 @@
 
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl,
+  View, Text, FlatList, StyleSheet,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { WalletStackParamList } from '@/navigation/AppNavigator';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { walletService } from '@/service/walletService';
+import { WALLET_QUERY_KEYS } from '@/hooks/useWallet';
+import { Chip, ScreenHeader, LoadingState, ErrorState, EmptyState } from '@/components/common';
 import { Transaction } from '@/types/wallet.types';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
@@ -37,11 +41,11 @@ const FILTERS = [
 export default function TransactionHistoryScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<WalletStackParamList, 'Transactions'>>();
   const [activeFilter, setActiveFilter] = useState(0);
 
-  const { data: transactions = [], isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ['wallet-transactions'],
+  const { data: transactions = [], isLoading, isError, isRefetching, refetch } = useQuery({
+    queryKey: WALLET_QUERY_KEYS.transactions,
     queryFn: walletService.getTransactions,
     staleTime: 60 * 1000,
   });
@@ -55,37 +59,33 @@ export default function TransactionHistoryScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.centerState}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+        <ScreenHeader title="Transaction History" onBack={() => navigation.goBack()} />
+        <LoadingState />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScreenHeader title="Transaction History" onBack={() => navigation.goBack()} />
+        <ErrorState title="Couldn't load transactions" onRetry={refetch} />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Transaction History</Text>
-        <View style={{ width: 30 }} />
-      </View>
+      <ScreenHeader title="Transaction History" onBack={() => navigation.goBack()} />
 
       <View style={styles.filterRow}>
         {FILTERS.map((f, i) => (
-          <TouchableOpacity
+          <Chip
             key={f.label}
-            style={[styles.filterChip, activeFilter === i && styles.filterChipActive]}
+            label={f.label}
+            active={activeFilter === i}
             onPress={() => setActiveFilter(i)}
-          >
-            <Text style={[
-              styles.filterLabel,
-              activeFilter === i && styles.filterLabelActive,
-            ]}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </View>
 
@@ -132,10 +132,7 @@ export default function TransactionHistoryScreen() {
         ItemSeparatorComponent={() => <View style={styles.divider} />}
         ListEmptyComponent={
           !isLoading ? (
-            <View style={styles.empty}>
-              <Ionicons name="receipt-outline" size={40} color={COLORS.textTertiary} />
-              <Text style={styles.emptyText}>No transactions found</Text>
-            </View>
+            <EmptyState icon="receipt-outline" title="No transactions found" />
           ) : null
         }
         contentContainerStyle={styles.listContent}
@@ -147,30 +144,11 @@ export default function TransactionHistoryScreen() {
 
 const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: SPACING.screenPadding, paddingBottom: SPACING.md,
-    borderBottomWidth: 1, borderBottomColor: COLORS.divider,
-    backgroundColor: COLORS.surface,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-  },
   filterRow: {
-    flexDirection: 'row', gap: SPACING.sm, padding: SPACING.md,
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, padding: SPACING.md,
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1, borderBottomColor: COLORS.divider,
   },
-  filterChip: {
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
-    borderRadius: SPACING.borderRadius.full,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
-  filterLabelActive: { color: COLORS.white, fontFamily: TYPOGRAPHY.fontFamily.medium },
   listContent: { flexGrow: 1 },
   txnRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
@@ -191,11 +169,4 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.divider },
   empty: { alignItems: 'center', paddingTop: SPACING.xxxl, gap: SPACING.md },
   emptyText: { fontSize: TYPOGRAPHY.fontSize.lg, color: COLORS.textSecondary },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 12,
-  },
 });

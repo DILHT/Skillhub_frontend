@@ -7,10 +7,11 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { storage } from '../utils/storage';
+import { clearQueryCache } from './queryClient';
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
-  'https://skillhub-backend-production-5b40.up.railway.app/api/v1';
+  'https://skillhub-backend-3pqd.onrender.com/api/v1';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -63,7 +64,7 @@ async function refreshAccessToken(): Promise<string> {
 
   // Call refresh endpoint directly (bypass interceptor to avoid infinite loop)
   const response = await axios.post(
-    `${BASE_URL}/auth/refresh`,
+    `${BASE_URL}/auth/token/refresh`,
     { refreshToken },
     { validateStatus: () => true }
   );
@@ -151,8 +152,11 @@ apiClient.interceptors.response.use(
         processQueue(refreshError, null);
         isRefreshing = false;
 
-        // Refresh failed — log user out
+        // Refresh failed — log user out. This is the second logout path
+        // (the first is useAuth.handleLogout); it has to wipe the cache too,
+        // or an expired session leaves the previous user's data on disk.
         useAuthStore.getState().logout('Session expired. Please sign in again.');
+        await clearQueryCache();
         await storage.clear();
 
         const err = new Error('Session expired. Please sign in again.');

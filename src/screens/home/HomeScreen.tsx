@@ -13,24 +13,26 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { HomeStackParamList } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { useHomeData, useServices } from '@/hooks/useServices';
 import { useAuthStore } from '@/store/authStore';
 import { ServiceCard } from '@/components/service/ServiceCard';
-import { CategoryChip } from '@/components/service/CategoryChip';
+import { Chip, ErrorState, SectionHeader, toIoniconName } from '@/components/common';
 import { ServiceCardSkeleton, Skeleton } from '@/components/common/Skeleton';
-import { Button } from '@/components/common';
 import { Category, Service } from '@/types/service.types';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
+import { FLOATING_TAB_BAR_INSET } from '@/constants/layout';
 import { TYPOGRAPHY } from '@/constants/typography';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export default function HomeScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'Home'>>();
   const user = useAuthStore((state) => state.user);
   const { unreadCount } = useNotifications();
 
@@ -61,18 +63,11 @@ export default function HomeScreen() {
   if (isHomeError) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="wifi-outline" size={48} color={COLORS.textTertiary} />
-          <Text style={styles.errorTitle}>Couldn't load services</Text>
-          <Text style={styles.errorSubtitle}>
-            Check your connection and try again
-          </Text>
-          <Button
-            label="Try again"
-            onPress={() => refetchHome()}
-            variant="outline"
-          />
-        </View>
+        <ErrorState
+          title="Couldn't load services"
+          message="Check your connection and try again"
+          onRetry={refetchHome}
+        />
       </SafeAreaView>
     );
   }
@@ -90,7 +85,10 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>
-              Good morning, {user?.firstName ?? 'there'} 👋
+              {(() => {
+                const h = new Date().getHours();
+                return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+              })()}, {user?.firstName ?? 'there'} 👋
             </Text>
             <Text style={styles.subGreeting}>
               What service do you need today?
@@ -128,48 +126,40 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* CATEGORIES */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Categories</Text>
-        </View>
+        <SectionHeader title="Categories" style={styles.sectionHeader} />
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesScroll}
         >
-          {/* All chip */}
-          <TouchableOpacity
-            style={[
-              styles.allChip,
-              !selectedCategoryId && styles.allChipActive,
-            ]}
+          <Chip
+            label="All"
+            active={!selectedCategoryId}
             onPress={() => setSelectedCategoryId(null)}
-          >
-            <Text
-              style={[
-                styles.allChipLabel,
-                !selectedCategoryId && styles.allChipLabelActive,
-              ]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
+            size="md"
+          />
 
           {isHomeLoading
             ? [1, 2, 3, 4].map((i) => (
                 <Skeleton
                   key={i}
                   width={90}
-                  height={36}
+                  height={44}
                   borderRadius={SPACING.borderRadius.full}
                   style={{ marginRight: SPACING.sm }}
                 />
               ))
             : homeData?.categories.map((cat: Category) => (
-                <CategoryChip
+                <Chip
                   key={cat.id}
-                  category={cat}
-                  isSelected={selectedCategoryId === cat.id}
+                  label={cat.name}
+                  // transformCategory puts the backend's iconUrl in this field,
+                  // so it is not guaranteed to be a glyph name.
+                  icon={toIoniconName(cat.icon)}
+                  color={cat.color}
+                  active={selectedCategoryId === cat.id}
+                  size="md"
                   onPress={() =>
                     setSelectedCategoryId(selectedCategoryId === cat.id ? null : cat.id)
                   }
@@ -180,12 +170,11 @@ export default function HomeScreen() {
         {/* FEATURED (only when no category filter active) */}
         {!selectedCategoryId && (
           <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Search')}>
-                <Text style={styles.seeAll}>See all</Text>
-              </TouchableOpacity>
-            </View>
+            <SectionHeader
+              title="Featured"
+              style={styles.sectionHeader}
+              action={{ label: "See all", onPress: () => navigation.navigate("Search") }}
+            />
 
             <ScrollView
               horizontal
@@ -245,7 +234,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={COLORS.background} />
 
       <FlatList
         data={mainListLoading ? ([1, 2, 3] as any[]) : mainListData}
@@ -298,6 +287,7 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   listContent: {
     padding: SPACING.screenPadding,
     paddingTop: 0,
+    paddingBottom: FLOATING_TAB_BAR_INSET,
     flexGrow: 1,
   },
 
@@ -329,18 +319,6 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.divider,
   },
-  notifDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.danger,
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    borderWidth: 1.5,
-    borderColor: COLORS.surface,
-  },
-
   // ── Search bar ───────────────────────────────────────────────────────────────
   searchBar: {
     flexDirection: 'row',
@@ -364,27 +342,9 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   categoriesScroll: {
     paddingBottom: SPACING.md,
     gap: SPACING.sm,
-  },
-  allChip: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: SPACING.borderRadius.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    marginRight: SPACING.sm,
-  },
-  allChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  allChipLabel: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textSecondary,
-  },
-  allChipLabelActive: {
-    color: COLORS.white,
+    // contentContainer defaults to alignItems: 'stretch', which makes every
+    // chip grow to the tallest one in the row.
+    alignItems: 'center',
   },
 
   // ── Section headers ──────────────────────────────────────────────────────────
@@ -399,11 +359,6 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
     fontFamily: TYPOGRAPHY.fontFamily.medium,
     color: COLORS.textPrimary,
   },
-  seeAll: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.primary,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-  },
   resultCount: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     color: COLORS.textSecondary,
@@ -413,24 +368,6 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   },
 
   // ── Error state ──────────────────────────────────────────────────────────────
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.xl,
-    gap: SPACING.md,
-  },
-  errorTitle: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-  },
-  errorSubtitle: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
 
   // ── Empty state ──────────────────────────────────────────────────────────────
   emptyState: {

@@ -5,11 +5,22 @@
 // - ServiceCard now navigates to ProviderProfile
 
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import {
+  createBottomTabNavigator,
+  type BottomTabNavigationProp,
+} from '@react-navigation/bottom-tabs';
+import {
+  createNativeStackNavigator,
+  type NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
+import type {
+  CompositeNavigationProp,
+  NavigatorScreenParams,
+  ParamListBase,
+} from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '@/context/ThemeContext';
-import { TYPOGRAPHY } from '../constants/typography';
+import FloatingTabBar from '@/components/navigation/FloatingTabBar';
 
 import HomeScreen from '../screens/home/HomeScreen';
 import SearchScreen from '../screens/home/SearchScreen';
@@ -30,6 +41,12 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
 import KYCScreen from '../screens/auth/KYCScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import ProviderBookingsScreen from '../screens/provider/ProviderBookingsScreen';
+import ProviderBookingDetailScreen from '../screens/provider/ProviderBookingDetailScreen';
+import ProviderServicesScreen from '../screens/provider/ProviderServicesScreen';
+import ProviderServiceFormScreen from '../screens/provider/ProviderServiceFormScreen';
+import ProviderAvailabilityScreen from '../screens/provider/ProviderAvailabilityScreen';
+import { useAuthStore } from '../store/authStore';
 export type HomeStackParamList = {
   Home: undefined;
   Search: undefined;
@@ -63,6 +80,36 @@ export type ProfileStackParamList = {
   Settings: undefined;
   KYC: undefined;
 };
+
+export type ProviderStackParamList = {
+  ProviderBookings: undefined;
+  ProviderBookingDetail: { bookingId: string };
+  ProviderServices: undefined;
+  ProviderServiceForm: { serviceId: string | undefined };
+  ProviderAvailability: undefined;
+};
+
+// The tab navigator's own param list. Screens that jump across tabs
+// (ServiceDetail → BookingsTab/BookingFlow, BookingConfirm → HomeTab/Home)
+// compose their stack's navigation prop with this one, so the target tab AND
+// the nested screen/params are both checked.
+export type AppTabParamList = {
+  HomeTab: NavigatorScreenParams<HomeStackParamList>;
+  BookingsTab: NavigatorScreenParams<BookingStackParamList>;
+  ChatTab: NavigatorScreenParams<ChatStackParamList>;
+  WalletTab: NavigatorScreenParams<WalletStackParamList>;
+  ProviderTab: NavigatorScreenParams<ProviderStackParamList>;
+  ProfileTab: NavigatorScreenParams<ProfileStackParamList>;
+};
+
+// Convenience alias for a screen inside `Stack` that can also reach other tabs.
+export type TabScreenNavigationProp<
+  ParamList extends ParamListBase,
+  RouteName extends keyof ParamList & string,
+> = CompositeNavigationProp<
+  NativeStackNavigationProp<ParamList, RouteName>,
+  BottomTabNavigationProp<AppTabParamList>
+>;
 
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 function HomeStackNavigator() {
@@ -153,21 +200,43 @@ function ProfileStackNavigator() {
   );
 }
 
+const ProviderStack = createNativeStackNavigator<ProviderStackParamList>();
+function ProviderStackNavigator() {
+  const { colors: COLORS } = useAppTheme();
+  const stackOpts = {
+    headerShown: false,
+    animation: 'slide_from_right' as const,
+    contentStyle: { backgroundColor: COLORS.background },
+  };
+  return (
+    <ProviderStack.Navigator screenOptions={stackOpts}>
+      <ProviderStack.Screen name="ProviderBookings" component={ProviderBookingsScreen} />
+      <ProviderStack.Screen name="ProviderBookingDetail" component={ProviderBookingDetailScreen} />
+      <ProviderStack.Screen name="ProviderServices" component={ProviderServicesScreen} />
+      <ProviderStack.Screen name="ProviderServiceForm" component={ProviderServiceFormScreen} />
+      <ProviderStack.Screen name="ProviderAvailability" component={ProviderAvailabilityScreen} />
+    </ProviderStack.Navigator>
+  );
+}
+
 const TABS = [
-  { name: 'HomeTab', component: HomeStackNavigator, label: 'Home', icon: 'home-outline' as const, iconFocused: 'home' as const },
-  { name: 'BookingsTab', component: BookingStackNavigator, label: 'Bookings', icon: 'calendar-outline' as const, iconFocused: 'calendar' as const },
-  { name: 'ChatTab', component: ChatStackNavigator, label: 'Chat', icon: 'chatbubbles-outline' as const, iconFocused: 'chatbubbles' as const },
-  { name: 'WalletTab', component: WalletStackNavigator, label: 'Wallet', icon: 'wallet-outline' as const, iconFocused: 'wallet' as const },
-  { name: 'ProfileTab', component: ProfileStackNavigator, label: 'Profile', icon: 'person-outline' as const, iconFocused: 'person' as const },
+  { name: 'HomeTab',     component: HomeStackNavigator,     label: 'Home',     icon: 'home-outline' as const,       iconFocused: 'home' as const },
+  { name: 'BookingsTab', component: BookingStackNavigator,  label: 'Bookings', icon: 'calendar-outline' as const,   iconFocused: 'calendar' as const },
+  { name: 'ChatTab',     component: ChatStackNavigator,     label: 'Chat',     icon: 'chatbubbles-outline' as const, iconFocused: 'chatbubbles' as const },
+  { name: 'WalletTab',   component: WalletStackNavigator,   label: 'Wallet',   icon: 'wallet-outline' as const,     iconFocused: 'wallet' as const },
+  { name: 'ProviderTab', component: ProviderStackNavigator, label: 'Provider', icon: 'briefcase-outline' as const,  iconFocused: 'briefcase' as const },
+  { name: 'ProfileTab',  component: ProfileStackNavigator,  label: 'Profile',  icon: 'person-outline' as const,     iconFocused: 'person' as const },
 ] as const;
 
 const Tab = createBottomTabNavigator();
 
 export default function AppNavigator() {
-  const { colors: COLORS, isDark } = useAppTheme();
+  const role = useAuthStore((s) => s.role);
+  const isProvider = role === 'provider' || role === 'both';
 
   return (
     <Tab.Navigator
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={({ route }) => {
         const tab = TABS.find((t) => t.name === route.name);
         return {
@@ -179,27 +248,16 @@ export default function AppNavigator() {
               color={color}
             />
           ),
-          tabBarActiveTintColor: COLORS.primary,
-          tabBarInactiveTintColor: COLORS.textTertiary,
-          tabBarStyle: {
-            backgroundColor: COLORS.tabBar,
-            borderTopColor: COLORS.tabBarBorder,
-            borderTopWidth: 1,
-            height: 60,
-            paddingBottom: 6,
-            paddingTop: 4,
-          },
-          tabBarLabelStyle: {
-            fontSize: TYPOGRAPHY.fontSize.xs,
-            fontFamily: TYPOGRAPHY.fontFamily.medium,
-          },
           tabBarLabel: tab?.label ?? route.name,
         };
       }}
     >
-      {TABS.map((tab) => (
-        <Tab.Screen key={tab.name} name={tab.name} component={tab.component} />
-      ))}
+      <Tab.Screen name="HomeTab"     component={HomeStackNavigator} />
+      <Tab.Screen name="BookingsTab" component={BookingStackNavigator} />
+      <Tab.Screen name="ChatTab"     component={ChatStackNavigator} />
+      <Tab.Screen name="WalletTab"   component={WalletStackNavigator} />
+      {isProvider ? <Tab.Screen name="ProviderTab" component={ProviderStackNavigator} /> : null}
+      <Tab.Screen name="ProfileTab"  component={ProfileStackNavigator} />
     </Tab.Navigator>
   );
 }

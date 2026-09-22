@@ -21,11 +21,13 @@ import React, { memo } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { PressableCard } from '@/components/common/PressableCard';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { HomeStackParamList } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { Service } from '../../types/service.types';
 import { SmartImage } from '@/components/common/SmartImage';
@@ -75,7 +77,7 @@ export const ServiceCard = memo<ServiceCardProps>(({
   variant = 'vertical',
   onPress,
 }) => {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
 
   const handlePress = () => {
     if (onPress) {
@@ -105,11 +107,7 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
   const cardStyles = makeStyles(COLORS, isDark);
 
   return (
-    <TouchableOpacity
-      style={[cardStyles.verticalContainer, cardStyle]}
-      onPress={onPress}
-      activeOpacity={0.92}
-    >
+    <PressableCard style={[cardStyles.verticalContainer, cardStyle]} onPress={onPress}>
       {/* IMAGE SECTION */}
       <View style={cardStyles.imageWrapper}>
         <SmartImage
@@ -118,14 +116,12 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
           fallbackIcon="image-outline"
         />
 
-        {/* Availability badge — absolute positioned on top of the image */}
         {!service.isAvailable && (
           <View style={cardStyles.unavailableBadge}>
             <Text style={cardStyles.unavailableText}>Unavailable</Text>
           </View>
         )}
 
-        {/* Distance badge — bottom-left of image */}
         {service.distance !== null && (
           <View style={cardStyles.distanceBadge}>
             <Ionicons name="location-outline" size={11} color={COLORS.white} />
@@ -140,8 +136,6 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
 
       {/* CONTENT SECTION */}
       <View style={cardStyles.verticalContent}>
-
-        {/* Provider row */}
         <View style={cardStyles.providerRow}>
           <Avatar
             uri={service.provider.avatar}
@@ -157,12 +151,10 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
           </Text>
         </View>
 
-        {/* Service title */}
         <Text style={cardStyles.title} numberOfLines={2}>
           {service.title}
         </Text>
 
-        {/* Rating + price row */}
         <View style={cardStyles.metaRow}>
           <RatingStars
             rating={service.rating}
@@ -177,7 +169,7 @@ const VerticalCard: React.FC<{ service: Service; onPress: () => void }> = ({
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </PressableCard>
   );
 };
 
@@ -191,11 +183,7 @@ const HorizontalCard: React.FC<{ service: Service; onPress: () => void }> = ({
   const cardStyles = makeStyles(COLORS, isDark);
 
   return (
-    <TouchableOpacity
-      style={[cardStyles.horizontalContainer, cardStyle]}
-      onPress={onPress}
-      activeOpacity={0.92}
-    >
+    <PressableCard style={[cardStyles.horizontalContainer, cardStyle]} onPress={onPress}>
       <SmartImage
         uri={service.images[0]}
         style={cardStyles.horizontalImage}
@@ -210,7 +198,7 @@ const HorizontalCard: React.FC<{ service: Service; onPress: () => void }> = ({
           {formatPrice(service.price, service.currency, service.priceUnit)}
         </Text>
       </View>
-    </TouchableOpacity>
+    </PressableCard>
   );
 };
 

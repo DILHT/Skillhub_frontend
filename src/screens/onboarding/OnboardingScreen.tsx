@@ -7,8 +7,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Button } from '@/components/common';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
+import { SPACING } from '@/constants/spacing';
+import { TYPOGRAPHY } from '@/constants/typography';
 
 const { width } = Dimensions.get('window');
 
@@ -93,11 +96,12 @@ export default function OnboardingScreen({ onDone }: Props) {
             <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
           ))}
         </View>
-        <TouchableOpacity style={styles.button} onPress={next}>
-          <Text style={styles.buttonText}>
-            {index === SLIDES.length - 1 ? 'Get Started' : 'Next'}
-          </Text>
-        </TouchableOpacity>
+        <Button
+          label={index === SLIDES.length - 1 ? 'Get Started' : 'Next'}
+          onPress={next}
+          fullWidth
+          size="lg"
+        />
       </View>
     </SafeAreaView>
   );
@@ -106,24 +110,19 @@ export default function OnboardingScreen({ onDone }: Props) {
 const makeStyles = (COLORS: AppColors) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: COLORS.background },
-    skipRow: { alignItems: 'flex-end', paddingHorizontal: 20, paddingTop: 8 },
-    skip: { fontSize: 15, color: COLORS.textSecondary, fontWeight: '500' },
-    slide: { width, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 20 },
+    skipRow: { alignItems: 'flex-end', paddingHorizontal: SPACING.screenPadding, paddingTop: SPACING.sm },
+    skip: { fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textSecondary, fontFamily: TYPOGRAPHY.fontFamily.medium },
+    slide: { width, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.xl, gap: SPACING.lg },
     iconCircle: {
       width: 140, height: 140, borderRadius: 70,
       backgroundColor: COLORS.primaryLight,
       alignItems: 'center', justifyContent: 'center',
       marginBottom: 12,
     },
-    title: { fontSize: 24, fontWeight: '600', color: COLORS.textPrimary, textAlign: 'center' },
-    body: { fontSize: 16, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 24 },
-    footer: { paddingHorizontal: 24, paddingBottom: 24, gap: 24 },
-    dots: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
+    title: { fontSize: TYPOGRAPHY.fontSize.xxl, fontFamily: TYPOGRAPHY.fontFamily.bold, color: COLORS.textPrimary, textAlign: 'center' },
+    body: { fontSize: TYPOGRAPHY.fontSize.md, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 24 },
+    footer: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg, gap: SPACING.lg },
+    dots: { flexDirection: 'row', justifyContent: 'center', gap: SPACING.sm },
     dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
     dotActive: { width: 24, backgroundColor: COLORS.primary },
-    button: {
-      backgroundColor: COLORS.primary,
-      paddingVertical: 16, borderRadius: 999, alignItems: 'center',
-    },
-    buttonText: { color: COLORS.white, fontSize: 16, fontWeight: '600' },
   });

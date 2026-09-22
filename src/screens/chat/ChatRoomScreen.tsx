@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { ChatStackParamList } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { useChatRoom } from '@/hooks/useChat';
 import { useAuthStore } from '@/store/authStore';
@@ -15,8 +17,8 @@ import { useChatStore } from '@/store/chatStore';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { Avatar } from '@/components/common/Avatar';
-import { ChatStackParamList } from '@/navigation/AppNavigator';
 import { Message } from '@/types/chat.types';
+import { useIsOnline } from '@/hooks/useIsOnline';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { SPACING } from '@/constants/spacing';
@@ -27,7 +29,7 @@ type RouteProps = RouteProp<ChatStackParamList, 'ChatRoom'>;
 export default function ChatRoomScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<ChatStackParamList, 'ChatRoom'>>();
   const route = useRoute<RouteProps>();
   const { conversationId, recipientName } = route.params;
 
@@ -35,6 +37,7 @@ export default function ChatRoomScreen() {
   const conversations = useChatStore((s) => s.conversations);
   const conversation = conversations.find((c) => c.id === conversationId);
   const isOnline = conversation?.isOnline ?? false;
+  const networkOnline = useIsOnline();
 
   const { messages, sendMessage, handleTyping, isOtherTyping } = useChatRoom(
     conversationId,
@@ -91,6 +94,7 @@ export default function ChatRoomScreen() {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
@@ -108,20 +112,6 @@ export default function ChatRoomScreen() {
             </Text>
           </View>
 
-          {/* Future: call button, info button */}
-          <TouchableOpacity style={styles.headerAction}
-          onPress={() => Alert.alert(
-              'Options',
-              '',
-              [
-                { text: 'View Profile', onPress: () => {} },
-                { text: 'Block User', style: 'destructive', onPress: () => {} },
-                { text: 'Cancel', style: 'cancel' },
-              ]
-            )}
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textPrimary} />
-          </TouchableOpacity>
         </View>
 
         {/* MESSAGES */}
@@ -151,7 +141,16 @@ export default function ChatRoomScreen() {
         />
 
         {/* INPUT BAR */}
-        <ChatInput onSend={sendMessage} onTyping={handleTyping} />
+        <ChatInput
+          onSend={(text) => {
+            if (!networkOnline) {
+              Alert.alert('No Connection', "You're offline. Please reconnect and try again.");
+              return;
+            }
+            sendMessage(text);
+          }}
+          onTyping={handleTyping}
+        />
 
       </KeyboardAvoidingView>
     </SafeAreaView>

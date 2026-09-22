@@ -2,6 +2,7 @@
 // AsyncStorage wrapper with get/set/clear
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QUERY_CACHE_KEY } from '../service/queryClient';
 
 export const storage = {
   get: async (key: string): Promise<string | null> => {
@@ -26,11 +27,16 @@ export const storage = {
     } catch {}
   },
 
+  // Clears the session-scoped keys only — NOT the whole AsyncStorage, which
+  // also holds the zustand slices, the onboarding flag and UI preferences.
+  //
+  // The React Query cache is included because it holds the signed-in user's
+  // bookings, wallet balance and transactions, persisted for 24h. Leaving it
+  // behind means the next account on this device reads the previous user's
+  // data off disk before the first refetch lands.
   clear: async (): Promise<void> => {
     try {
-      // Only clear app-specific keys, not the entire AsyncStorage
-      // (zustand/persist also uses AsyncStorage)
-      await AsyncStorage.removeItem('refreshToken');
+      await AsyncStorage.multiRemove(['refreshToken', QUERY_CACHE_KEY]);
     } catch {}
   },
 };

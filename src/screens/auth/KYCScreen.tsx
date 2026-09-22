@@ -7,8 +7,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { ProfileStackParamList } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@/components/common';
+import { Button, Chip, SectionHeader } from '@/components/common';
+import { ScreenHeader } from '@/components/common/ScreenHeader';
 import { useAppTheme } from '@/context/ThemeContext';
 import { AppColors } from '@/constants/theme';
 import { showImageSourceChooser } from '@/utils/imagePicker';
@@ -71,7 +74,7 @@ export default function KYCScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
   const uploadStyles = makeUploadStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'KYC'>>();
   const [selectedDoc, setSelectedDoc] = useState<DocumentType>('national_id');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -114,13 +117,7 @@ export default function KYCScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Identity Verification</Text>
-        <View style={{ width: 30 }} />
-      </View>
+      <ScreenHeader title="Identity Verification" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -136,28 +133,22 @@ export default function KYCScreen() {
         </View>
 
         {/* DOCUMENT TYPE */}
-        <Text style={styles.sectionTitle}>Select document type</Text>
+        <SectionHeader title="Select document type" />
         <View style={styles.docTypeRow}>
           {DOCUMENT_TYPES.map((doc) => (
-            <TouchableOpacity
+            <Chip
               key={doc.value}
-              style={[styles.docChip, selectedDoc === doc.value && styles.docChipActive]}
+              label={doc.label}
+              icon={doc.icon as keyof typeof Ionicons.glyphMap}
+              active={selectedDoc === doc.value}
+              size="md"
               onPress={() => setSelectedDoc(doc.value)}
-            >
-              <Ionicons
-                name={doc.icon as any}
-                size={18}
-                color={selectedDoc === doc.value ? COLORS.primary : COLORS.textSecondary}
-              />
-              <Text style={[styles.docChipLabel, selectedDoc === doc.value && styles.docChipLabelActive]}>
-                {doc.label}
-              </Text>
-            </TouchableOpacity>
+            />
           ))}
         </View>
 
         {/* UPLOAD SLOTS */}
-        <Text style={styles.sectionTitle}>Upload documents</Text>
+        <SectionHeader title="Upload documents" />
         <View style={styles.uploadGrid}>
           {slots.map((slot) => (
             <UploadCard
@@ -243,7 +234,6 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: COLORS.divider,
     backgroundColor: COLORS.surface,
   },
-  headerTitle: { fontSize: TYPOGRAPHY.fontSize.lg, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
   content: { padding: SPACING.screenPadding, gap: SPACING.lg },
   infoBanner: {
     flexDirection: 'row', gap: SPACING.md,
@@ -253,17 +243,7 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
   },
   infoTitle: { fontSize: TYPOGRAPHY.fontSize.sm, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.primary, marginBottom: 4 },
   infoText: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary, lineHeight: 20 },
-  sectionTitle: { fontSize: TYPOGRAPHY.fontSize.md, fontFamily: TYPOGRAPHY.fontFamily.medium, color: COLORS.textPrimary },
-  docTypeRow: { flexDirection: 'row', gap: SPACING.sm, flexWrap: 'wrap' },
-  docChip: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACING.xs,
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
-    borderRadius: SPACING.borderRadius.full, borderWidth: 1.5, borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  docChipActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
-  docChipLabel: { fontSize: TYPOGRAPHY.fontSize.sm, color: COLORS.textSecondary },
-  docChipLabelActive: { color: COLORS.primary, fontFamily: TYPOGRAPHY.fontFamily.medium },
+  docTypeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, flexWrap: 'wrap' },
   uploadGrid: { gap: SPACING.md },
   tipsCard: {
     backgroundColor: COLORS.surface, borderRadius: SPACING.borderRadius.lg,

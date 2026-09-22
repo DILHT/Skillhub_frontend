@@ -10,6 +10,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/common';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,7 +42,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function RegisterScreen() {
   const { colors: COLORS, isDark } = useAppTheme();
   const styles = makeStyles(COLORS, isDark);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
 
   const [selectedRole, setSelectedRole] = useState<'client' | 'provider'>('client');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -147,7 +149,7 @@ export default function RegisterScreen() {
                     ref={ref} label="First name" placeholder="John"
                     value={value} onChangeText={onChange} onBlur={onBlur}
                     error={errors.firstName?.message}
-                    style={styles.halfInput} isRequired
+                    isRequired
                   />
                 )}
               />
@@ -158,7 +160,7 @@ export default function RegisterScreen() {
                     ref={ref} label="Last name" placeholder="Banda"
                     value={value} onChangeText={onChange} onBlur={onBlur}
                     error={errors.lastName?.message}
-                    style={styles.halfInput} isRequired
+                    isRequired
                   />
                 )}
               />
@@ -326,8 +328,7 @@ const makeStyles = (COLORS: AppColors, _isDark: boolean) => StyleSheet.create({
     lineHeight: 16,
   },
   form: { gap: SPACING.md },
-  nameRow: { flexDirection: 'row', gap: SPACING.md },
-  halfInput: { flex: 1 },
+  nameRow: { flexDirection: 'column', gap: SPACING.md },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

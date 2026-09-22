@@ -1,49 +1,52 @@
 // src/components/booking/StatusBadge.tsx
+// Booking-status wrapper around the shared <Badge>. Keeps the status map
+// and the unknown-status fallback; the colours now come from theme tokens
+// via Badge's tone scale instead of the inline hex this used to carry.
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { BookingStatus } from '../../types/booking.types';
-import { useAppTheme } from '@/context/ThemeContext';
-import { SPACING } from '../../constants/spacing';
-import { TYPOGRAPHY } from '../../constants/typography';
+import { Badge, BadgeTone } from '@/components/common/Badge';
 
 interface StatusBadgeProps {
-  status: BookingStatus;
+  // Widened to string: the backend can introduce statuses the UI has no case
+  // for yet (NO_SHOW, EXPIRED, …), and an unknown value must not crash.
+  status: BookingStatus | string;
 }
 
-type StatusConfig = { label: string; lightBg: string; lightText: string; darkBg: string; darkText: string };
+type StatusConfig = { label: string; tone: BadgeTone };
 
 const STATUS_CONFIG: Record<BookingStatus, StatusConfig> = {
-  pending:     { label: 'Pending',     lightBg: '#FEF3C7', lightText: '#92400E', darkBg: '#1C1400', darkText: '#F59E0B' },
-  accepted:    { label: 'Accepted',    lightBg: '#DBEAFE', lightText: '#1E40AF', darkBg: '#0C1A2E', darkText: '#3B82F6' },
-  in_progress: { label: 'In Progress', lightBg: '#EDE9FE', lightText: '#5B21B6', darkBg: '#130D26', darkText: '#A78BFA' },
-  completed:   { label: 'Completed',   lightBg: '#D1FAE5', lightText: '#065F46', darkBg: '#052E16', darkText: '#22C55E' },
-  cancelled:   { label: 'Cancelled',   lightBg: '#F3F4F6', lightText: '#6B7280', darkBg: '#1F2937', darkText: '#9CA3AF' },
-  rejected:    { label: 'Rejected',    lightBg: '#FEE2E2', lightText: '#991B1B', darkBg: '#1F0000', darkText: '#EF4444' },
+  pending:     { label: 'Pending',     tone: 'warning' },
+  accepted:    { label: 'Accepted',    tone: 'info' },
+  in_progress: { label: 'In Progress', tone: 'accent' },
+  completed:   { label: 'Completed',   tone: 'success' },
+  cancelled:   { label: 'Cancelled',   tone: 'neutral' },
+  rejected:    { label: 'Rejected',    tone: 'danger' },
+  declined:    { label: 'Declined',    tone: 'danger' },
+  disputed:    { label: 'Disputed',    tone: 'warning' },
 };
+
+// Used for any status the backend sends that the map above has no case for.
+// Renders the humanised raw value in neutral grey rather than crashing.
+const FALLBACK_CONFIG: StatusConfig = { label: 'Unknown', tone: 'neutral' };
+
+// Turns 'in_progress' / 'IN_PROGRESS' into 'In Progress' for unmapped values.
+function humanizeStatus(status: string): string {
+  const cleaned = status.replace(/[_-]+/g, ' ').trim();
+  if (!cleaned) return FALLBACK_CONFIG.label;
+  return cleaned
+    .toLowerCase()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  const { isDark } = useAppTheme();
-  const cfg = STATUS_CONFIG[status];
-  const bg = isDark ? cfg.darkBg : cfg.lightBg;
-  const text = isDark ? cfg.darkText : cfg.lightText;
+  const known = STATUS_CONFIG[status as BookingStatus] as StatusConfig | undefined;
+  const cfg = known ?? {
+    ...FALLBACK_CONFIG,
+    label: humanizeStatus(String(status ?? '')),
+  };
 
-  return (
-    <View style={[styles.badge, { backgroundColor: bg }]}>
-      <Text style={[styles.label, { color: text }]}>{cfg.label}</Text>
-    </View>
-  );
+  return <Badge label={cfg.label} tone={cfg.tone} size="md" />;
 };
-
-const styles = StyleSheet.create({
-  badge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-    borderRadius: SPACING.borderRadius.full,
-    alignSelf: 'flex-start',
-  },
-  label: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    fontFamily: TYPOGRAPHY.fontFamily.medium,
-  },
-});

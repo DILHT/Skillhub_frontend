@@ -2,6 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BookingStackParamList } from '../navigation/AppNavigator';
 import { bookingService } from '../service/bookingService';
 import { useBookingStore } from '../store/bookingStore';
 import { CreateBookingRequest } from '../types/booking.types';
@@ -32,7 +34,7 @@ export function useBookingDetail(id: string | undefined) {
 // Create a new booking — called from BookingScreen
 export function useCreateBooking() {
   const queryClient = useQueryClient();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<BookingStackParamList>>();
   const { addBooking, clearDraft } = useBookingStore();
 
   return useMutation({

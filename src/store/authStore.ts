@@ -13,6 +13,7 @@ interface AuthState {
   isHydrated: boolean;
   role: UserRole | null;
   logoutReason: string | null;
+  activeMode: 'client' | 'provider';
 
   setUser: (user: User, accessToken: string) => void;
   updateToken: (accessToken: string) => void;  // ← new: used by token refresh
@@ -20,6 +21,7 @@ interface AuthState {
   logout: (reason?: string) => void;
   clearLogoutReason: () => void;
   setHydrated: () => void;
+  setActiveMode: (mode: 'client' | 'provider') => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -31,6 +33,7 @@ export const useAuthStore = create<AuthState>()(
       isHydrated: false,
       role: null,
       logoutReason: null,
+      activeMode: 'client',
 
       setUser: (user, accessToken) =>
         set({
@@ -38,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
           token: accessToken,
           isAuthenticated: true,
           role: user.role,
+          activeMode: user.role === 'provider' ? 'provider' : 'client',
         }),
 
       // Called by token refresh — updates token without touching user data
@@ -56,11 +60,14 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           role: null,
           logoutReason: reason ?? null,
+          activeMode: 'client',
         }),
 
       clearLogoutReason: () => set({ logoutReason: null }),
 
       setHydrated: () => set({ isHydrated: true }),
+
+      setActiveMode: (mode) => set({ activeMode: mode }),
     }),
     {
       name: 'skillhub-auth',
@@ -70,6 +77,7 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
         role: state.role,
+        activeMode: state.activeMode,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();
