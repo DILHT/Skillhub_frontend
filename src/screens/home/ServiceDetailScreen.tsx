@@ -53,7 +53,10 @@ export default function ServiceDetailScreen() {
   const handleBookNow = () => {
     if (!service) return;
     startBooking(service);
-    navigation.navigate("BookingFlow", { serviceId: service.id });
+    navigation.navigate("BookingsTab", {
+      screen: "BookingFlow",
+      params: { serviceId: service.id },
+    });
   };
 
   // ── LOADING ─────────────────────────────────────────────────────────────────
