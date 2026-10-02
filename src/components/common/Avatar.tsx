@@ -13,7 +13,7 @@ import { SmartImage } from '@/components/common/SmartImage';
 import { AppColors } from '@/constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
 
-type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
 interface AvatarProps {
   uri?: string | null;       // Image URL from backend
@@ -39,6 +39,7 @@ const AVATAR_SIZES: Record<AvatarSize, number> = {
   md: 40,
   lg: 52,
   xl: 72,
+  xxl: 96,
 };
 
 const FONT_SIZES: Record<AvatarSize, number> = {
@@ -47,6 +48,7 @@ const FONT_SIZES: Record<AvatarSize, number> = {
   md: 14,
   lg: 18,
   xl: 26,
+  xxl: 32, // For extra-large avatars (e.g., profile screen)
 };
 
 export const Avatar: React.FC<AvatarProps> = ({
