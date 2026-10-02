@@ -10,7 +10,7 @@ import { storage } from '../utils/storage';
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
-  'https://skillhub-backend-production-5b40.up.railway.app/api/v1';
+  'https://skillhub-backend-3pqd.onrender.com/api/v1';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

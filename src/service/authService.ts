@@ -6,7 +6,7 @@ import { apiClient } from './api';
 import { AuthResponse, RegisterResponse, RefreshResponse, User } from '../types/user.types';
 
 function toBackendRegisterRole(role: 'client' | 'provider') {
-  return role === 'provider' ? 'PROVIDER' : 'CLIENT';
+  return role === 'provider' ? 'provider' : 'client';
 }
 
 export const authService = {
@@ -36,7 +36,7 @@ export const authService = {
     email: string;
     otp: string;
   }): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/auth/register/verify-email', {
+    const response = await apiClient.post<AuthResponse>('/auth/verify/email/otp', {
       email: data.email,
       otp: data.otp,
     });

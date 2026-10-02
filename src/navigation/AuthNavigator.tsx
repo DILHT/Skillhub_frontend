@@ -45,6 +45,9 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import KYCScreen from '../screens/auth/KYCScreen';
+import ChooseScreen from '../screens/auth/ChooseScreen';
+import NameScreen from '../screens/auth/NameScreen';
 import { COLORS } from '../constants/colors';
 
 export type AuthStackParamList = {
@@ -74,6 +77,9 @@ export default function AuthNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="OTP" component={OTPScreen} />
+      <Stack.Screen name="Choose" component={ChooseScreen} />
+      <Stack.Screen name="Name" component={NameScreen} />
+      <Stack.Screen name="KYC" component={KYCScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
